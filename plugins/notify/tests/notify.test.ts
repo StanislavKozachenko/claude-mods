@@ -4,7 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 // The engine beneath the mod: a Windows host whose process runs are recorded,
 // a clock the test moves, and calls that pass.
-const engine = (on: On) => {
+const engine = (on: On, pushRefusal?: string) => {
   const runs: { argv: readonly string[]; stdin?: string }[] = []
   const clock = mock.clock(on, { now: 0 })
   mock.env(on, { OS: 'Windows_NT' })
@@ -15,11 +15,18 @@ const engine = (on: On) => {
   on('session.cwd', () => ({ value: 'C:\\work\\app' }) as never)
   on('turn.complete', (_$, e) => ({ text: e.answer }) as never)
   on('classic.Notification', () => ({}) as never)
-  on('tool.call', () => ({ result: { answers: {} } }) as never)
+  // Claude Code's push answers as it does away from the terminal: sent
+  const pushes: string[] = []
+  on('tool.call', (_$, e) => {
+    if (String(e.tool) !== 'PushNotification') return { result: { answers: {} } } as never
+    pushes.push(String((e as { message?: string }).message))
+    if (pushRefusal === 'local-only') return { result: { message: '', pushSent: false, localSent: true } } as never
+    return { result: pushRefusal === undefined ? { message: '', pushSent: true, localSent: false } : { message: '', pushSent: false, localSent: false, disabledReason: pushRefusal } } as never
+  })
 
   const toasts = () => runs.filter(run => run.argv[0] === 'powershell').map(run => JSON.parse(run.stdin ?? '{}'))
 
-  return { clock, toasts }
+  return { clock, toasts, pushes }
 }
 
 const complete = (durationMs: number, extra: object = {}) =>
@@ -81,7 +88,7 @@ test('/notify test sends a sample', async ($, on) => {
     origin: { kind: 'composer' } as CommandRunInput['origin'],
     presentation: { isFullscreen: false, columns: 100 },
   }
-  expect((await $.command.run(input)).text).toBe('Sent a test notification (windows).')
+  expect((await $.command.run(input)).text).toBe('Desktop: sent (windows).\nPhone: sent through Claude Code push.')
   expect(toasts()).toEqual([{ title: 'Claude Code · app', body: 'Notifications work.' }])
 })
 
@@ -110,19 +117,19 @@ const TEST_COMMAND: CommandRunInput = {
 
 test('macOS is told apart by uname and notified through osascript', async ($, on) => {
   const runs = host(on, {}, 'Darwin')
-  expect((await $.command.run(TEST_COMMAND)).text).toBe('Sent a test notification (macos).')
+  expect((await $.command.run(TEST_COMMAND)).text).toContain('Desktop: sent (macos).')
   expect(runs.at(-1)?.[0]).toBe('osascript')
 })
 
 test('Linux is notified through notify-send', async ($, on) => {
   const runs = host(on, {}, 'Linux')
-  expect((await $.command.run(TEST_COMMAND)).text).toBe('Sent a test notification (linux).')
+  expect((await $.command.run(TEST_COMMAND)).text).toContain('Desktop: sent (linux).')
   expect(runs.at(-1)?.slice(0, 3)).toEqual(['notify-send', '--app-name=Claude Code', '--'])
 })
 
 test('WSL notifies on the Windows desktop through powershell.exe', async ($, on) => {
   const runs = host(on, { WSL_DISTRO_NAME: 'Ubuntu' }, 'Linux')
-  expect((await $.command.run(TEST_COMMAND)).text).toBe('Sent a test notification (wsl).')
+  expect((await $.command.run(TEST_COMMAND)).text).toContain('Desktop: sent (wsl).')
   expect(runs.at(-1)?.[0]).toBe('powershell.exe')
   expect(runs.some(argv => argv[0] === 'uname')).toBe(false)
 })
@@ -239,4 +246,37 @@ test('budgetPercent sets the threshold', { ...WITH_CI_BUDGET, options: { budgetP
   withStore(on)
   await measure($, snapshot(55))
   expect(toasts()).toHaveLength(1)
+})
+
+test('every notification also goes to the phone through Claude Code push', async ($, on) => {
+  const { pushes } = engine(on)
+  await $.turn.complete(complete(125_000))
+  expect(pushes).toEqual(['Claude Code · app: Done in 2m 5s: All tests pass.'])
+})
+
+test('push: false sends nothing to the phone, desktop: false nothing to the desktop', { options: { push: false } }, async ($, on) => {
+  const { pushes, toasts } = engine(on)
+  await $.turn.complete(complete(125_000))
+  expect(pushes).toEqual([])
+  expect(toasts()).toHaveLength(1)
+})
+
+test('desktop: false keeps the phone only', { options: { desktop: false } }, async ($, on) => {
+  const { pushes, toasts } = engine(on)
+  await $.turn.complete(complete(125_000))
+  expect(toasts()).toEqual([])
+  expect(pushes).toHaveLength(1)
+})
+
+test('/notify test says why the phone got nothing', async ($, on) => {
+  engine(on, 'user_present')
+  const { text = '' } = await $.command.run({ ...TEST_COMMAND })
+  expect(text).toContain('Phone: not sent: you are at this terminal')
+})
+
+test('no second desktop notification when Claude Code showed its own', async ($, on) => {
+  const { pushes, toasts } = engine(on, 'local-only')
+  await $.turn.complete(complete(125_000))
+  expect(pushes).toHaveLength(1)
+  expect(toasts()).toEqual([])
 })

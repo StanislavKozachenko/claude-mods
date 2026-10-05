@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { asciiJson, doneToast, firstLine, formatDuration, permissionToast, questionToast, title, toastCommand } from '../hooks/toast'
+import { asciiJson, doneToast, pushMessage, pushReason, firstLine, formatDuration, permissionToast, questionToast, title, toastCommand } from '../hooks/toast'
 
 const TOAST = { title: 'Claude Code · app', body: `Done: it's "quoted" $(rm -rf ~) \`x\`` }
 
@@ -59,5 +59,19 @@ describe('texts', () => {
       'Needs permission: Claude needs your permission to use Bash',
     )
     expect(questionToast('/x/app', '').body).toBe('Question: Claude is asking you something')
+  })
+})
+
+describe('push', () => {
+  test('pushMessage fits a phone', async () => {
+    expect(pushMessage({ title: 'Claude Code · app', body: 'Done in 5s' })).toBe('Claude Code · app: Done in 5s')
+    expect(pushMessage({ title: 'T', body: 'x'.repeat(300) }).length).toBe(200)
+  })
+
+  test('pushReason says what to do', async () => {
+    expect(pushReason('user_present')).toContain('when you are away')
+    expect(pushReason('config_off')).toContain('agentPushNotifEnabled')
+    expect(pushReason('no_transport')).toContain('Remote Control')
+    expect(pushReason(undefined)).toBe('Claude Code did not send it.')
   })
 })

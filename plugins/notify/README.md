@@ -1,6 +1,6 @@
 # notify
 
-Native desktop notifications that say what happened, for when you switch away during a long turn:
+Notifications that say what happened, for when you switch away during a long turn: on the desktop of the machine Claude Code runs on, and on your phone through Claude Code's own push:
 
 | When | Notification |
 | --- | --- |
@@ -14,6 +14,15 @@ Native desktop notifications that say what happened, for when you switch away du
 ```
 
 Each notification has its own switch, all on by default. The title names the project folder, so two sessions are told apart. A prompt you answer within the delay sends nothing, and neither does a turn you interrupted (you were there) or a subagent's turn.
+
+## On your phone
+
+Each notification also goes through Claude Code's own push (its `PushNotification` tool), so it reaches the **Claude app on your phone** when you are away: Claude Code decides delivery itself. It needs nothing beyond Claude Code:
+
+- **Remote Control** connected for the session, and the Claude app (iOS or Android) signed in to the same claude.ai account; open the app once so it registers for push
+- **"Push when Claude decides"** on in `/config` (`agentPushNotifEnabled`, on unless you turned it off)
+
+While you are typing in or looking at the connected terminal, Claude Code holds the push: nothing pings you twice. When it does deliver, Claude Code also shows its own desktop notification, and notify then skips its own, so the desktop gets one. Without Remote Control the phone gets nothing and the desktop notification works as before. `/notify test` says what each channel did and, for the phone, why it got nothing and what to do. `push: false` turns the phone off, `desktop: false` the desktop.
 
 ## Budget notifications
 
@@ -34,6 +43,8 @@ No dependencies, and the text never passes through a shell or into a script:
 
 | Option | Default | |
 | --- | --- | --- |
+| `desktop` | `true` | Native desktop notification on the machine Claude Code runs on |
+| `push` | `true` | Also through Claude Code push: the Claude app on your phone when you are away |
 | `done` | `true` | A turn longer than `minSeconds` finished |
 | `permission` | `true` | A permission prompt is still waiting |
 | `question` | `true` | A question is still waiting |
