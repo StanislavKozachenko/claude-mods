@@ -7,5 +7,19 @@
   "metadata": {
     "description": "A collection of Claude Code mods, shipped as plugins"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "guard",
+      "source": "./plugins/guard",
+      "version": "0.0.0",
+      "description": "Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command",
+      "category": "security",
+      "keywords": [
+        "security",
+        "guard",
+        "bash",
+        "secrets"
+      ]
+    }
+  ]
 }
