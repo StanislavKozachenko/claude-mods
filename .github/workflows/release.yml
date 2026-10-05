@@ -11,6 +11,7 @@ on:
         options:
           - context-bar
           - guard
+          - notify
           - turn-stats
       bump:
         description: 'Version bump (auto: from the commits)'

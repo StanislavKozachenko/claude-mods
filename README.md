@@ -22,6 +22,7 @@ Add the marketplace once, then install the mods you want:
 | --- | --- |
 | [context-bar](plugins/context-bar) | Shows the context window as a stacked bar above the prompt, one colour per `/context` category; `/context-bar` toggles it |
 | [guard](plugins/guard) | Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command |
+| [notify](plugins/notify) | Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you |
 | [turn-stats](plugins/turn-stats) | Adds what a turn did to its 'Worked for' line: tool calls by tool, failures, files changed and cost |
 
 ## Develop
