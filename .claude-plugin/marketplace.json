@@ -48,6 +48,19 @@
       ]
     },
     {
+      "name": "redact",
+      "source": "./plugins/redact",
+      "version": "0.0.0",
+      "description": "Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends",
+      "category": "security",
+      "keywords": [
+        "security",
+        "secrets",
+        "redaction",
+        "privacy"
+      ]
+    },
+    {
       "name": "turn-stats",
       "source": "./plugins/turn-stats",
       "version": "0.1.0",
