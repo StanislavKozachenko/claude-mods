@@ -11,6 +11,8 @@ import { execFileSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
+import { marketSource, releaseTag } from './market-source.mjs'
+
 const ROOT = resolve(import.meta.dirname, '..')
 const BUMPS = ['auto', 'patch', 'minor', 'major']
 
@@ -55,7 +57,7 @@ const level =
   bump !== 'auto' ? bump : isBreaking ? (major === 0 ? 'minor' : 'major') : hasFeature ? 'minor' : 'patch'
 const version =
   level === 'major' ? `${major + 1}.0.0` : level === 'minor' ? `${major}.${minor + 1}.0` : `${major}.${minor}.${patch + 1}`
-const tag = `${mod}--v${version}`
+const tag = releaseTag(mod, version)
 
 const line = commit => `- ${commit.isBreaking ? '**Breaking:** ' : ''}${commit.text}`
 const section = (title, types) => {
@@ -76,6 +78,7 @@ const market = JSON.parse(readFileSync(marketPath, 'utf8'))
 const listed = market.plugins.find(entry => entry.name === mod)
 if (!listed) fail(`${mod} is not listed in marketplace.json`)
 listed.version = version
+listed.source = marketSource(mod, version)
 writeFileSync(marketPath, `${JSON.stringify(market, null, 2)}\n`)
 
 const changelog = readFileSync(changelogPath, 'utf8')

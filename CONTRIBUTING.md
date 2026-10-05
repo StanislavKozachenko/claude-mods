@@ -52,7 +52,7 @@ plugins/<name>/
 ```
 
 - Start at version `0.0.0`; the first release makes it `0.1.0`
-- Add the mod to `.claude-plugin/marketplace.json` with the same name and version, and to the `mod` options in `.github/workflows/release.yml` (`npm run check` fails until both are there)
+- Add the mod to `.claude-plugin/marketplace.json` with its name, `"version": "0.0.0"` and `"source": "./plugins/<name>"`, and to the `mod` options in `.github/workflows/release.yml` (`npm run check` fails until both are there). The first release moves its source to its release tag
 - Mods run on Linux, Windows and macOS, whose builds have different built-in tools (Linux has no `Grep`): match a tool that is not on every build by name, not by its types. CI checks each mod on all three
 - Load it from disk with `npx claude --plugin-dir plugins/<name>`; saving a file reloads it. Loading writes the API's types for that Claude Code build to `plugins/<name>/.claude-plugin/types/` (git-ignored), which your editor and `tsc` read
 - `npm run check -- <name>` runs `claude plugin validate --strict`, `tsc` and `claude plugin test` for that mod; without a name it checks every mod
@@ -62,7 +62,9 @@ plugins/<name>/
 
 Each mod is versioned on its own. The maintainer runs the **Release** workflow (Actions → Release → Run workflow, or `gh workflow run Release -f mod=<mod> -f bump=auto`) and picks the mod and a bump. `auto` derives it from the mod's commits since its last tag: a breaking change → major (minor while 0.x), `feat` → minor, otherwise patch. `node scripts/release.mjs <mod> --dry-run` previews it locally.
 
-The workflow checks the mod, bumps the version in `plugin.json` and `marketplace.json`, adds a `CHANGELOG.md` entry from the mod's commits, commits that to `main` through the GitHub API (so the commit is signed and Verified), and publishes a `<mod>--v<version>` GitHub release on it. Installed copies pick the new version up with `/plugin update`.
+The workflow checks the mod, bumps the version in `plugin.json` and `marketplace.json`, adds a `CHANGELOG.md` entry from the mod's commits, commits that to `main` through the GitHub API (so the commit is signed and Verified), and publishes a `<mod>--v<version>` GitHub release on it. Installed copies pick the new version up with `/plugin update` or auto-update.
+
+A released mod is installed from its release tag, not from `main`: its marketplace entry is a `git-subdir` source whose `ref` is `<mod>--v<version>`, which the Release workflow rewrites on every release (`scripts/market-source.mjs`). So a change merged into `main` reaches nobody until it is released, and `npm run check` fails if an entry points anywhere else.
 
 The release commit is the only commit that lands on `main` without a PR. It needs a `RELEASE_TOKEN` secret: a token of the repo admin with contents write access, the one actor the `main` ruleset lets past the PR requirement.
 
