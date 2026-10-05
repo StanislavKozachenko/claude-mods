@@ -1,6 +1,6 @@
 {
   "name": "redact",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends",
   "author": {
     "name": "Stanislav Kozachenko",
