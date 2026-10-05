@@ -97,10 +97,14 @@ export const register: Register = (on, options) => {
 
     const { Box, Text } = $.ui.resolve(e)
 
+    // The engine line takes the full width, so the summary goes on its own row
+    // beneath it, under the text after the glyph.
     return (
-      <Box>
+      <Box flexDirection="column">
         {line}
-        <Text dimColor> · {text}</Text>
+        <Box paddingLeft={2}>
+          <Text dimColor>{text}</Text>
+        </Box>
       </Box>
     )
   })

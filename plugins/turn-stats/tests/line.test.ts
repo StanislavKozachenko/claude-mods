@@ -87,5 +87,5 @@ test('cost: false and topTools: 0', { options: { cost: false, topTools: 0 } }, a
   await runTurn($, session)
 
   const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
-  expect(await ui.find({ type: 'Text', text: / · 3 tools · 1 failed · 1 file$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^3 tools · 1 failed · 1 file$/ })).toBeDefined()
 })
