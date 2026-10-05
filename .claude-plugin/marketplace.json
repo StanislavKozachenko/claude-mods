@@ -9,6 +9,19 @@
   },
   "plugins": [
     {
+      "name": "context-bar",
+      "source": "./plugins/context-bar",
+      "version": "0.1.0",
+      "description": "Shows the context window as a stacked bar above the prompt, one colour per /context category; /context-bar toggles it",
+      "category": "productivity",
+      "keywords": [
+        "context",
+        "tokens",
+        "ui",
+        "status"
+      ]
+    },
+    {
       "name": "guard",
       "source": "./plugins/guard",
       "version": "0.1.0",
@@ -22,16 +35,16 @@
       ]
     },
     {
-      "name": "context-bar",
-      "source": "./plugins/context-bar",
-      "version": "0.1.0",
-      "description": "Shows the context window as a stacked bar above the prompt, one colour per /context category; /context-bar toggles it",
+      "name": "notify",
+      "source": "./plugins/notify",
+      "version": "0.0.0",
+      "description": "Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you",
       "category": "productivity",
       "keywords": [
-        "context",
-        "tokens",
-        "ui",
-        "status"
+        "notifications",
+        "toast",
+        "desktop",
+        "permission"
       ]
     },
     {

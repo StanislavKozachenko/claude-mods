@@ -1,0 +1,40 @@
+{
+  "name": "notify",
+  "version": "0.0.0",
+  "description": "Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you",
+  "author": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "homepage": "https://github.com/StanislavKozachenko/claude-mods/tree/main/plugins/notify",
+  "repository": "https://github.com/StanislavKozachenko/claude-mods",
+  "license": "MIT",
+  "keywords": ["notifications", "toast", "desktop", "permission"],
+  "userConfig": {
+    "events": {
+      "type": "string",
+      "multiple": true,
+      "title": "Notify about",
+      "description": "done: a long turn finished; permission: a permission prompt is waiting; question: Claude asked you a question",
+      "default": ["done", "permission", "question"]
+    },
+    "minSeconds": {
+      "type": "number",
+      "title": "Shortest turn to notify about",
+      "description": "A turn that finishes sooner sends no notification, in seconds",
+      "default": 30
+    },
+    "permissionDelaySeconds": {
+      "type": "number",
+      "title": "Wait before notifying about a prompt",
+      "description": "A permission prompt or question answered within this many seconds sends no notification",
+      "default": 10
+    },
+    "speak": {
+      "type": "boolean",
+      "title": "Also read it aloud",
+      "description": "Speak the notification with the system voice",
+      "default": false
+    }
+  }
+}
