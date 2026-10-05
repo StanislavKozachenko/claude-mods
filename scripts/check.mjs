@@ -31,6 +31,14 @@ const allMods = () =>
 
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'))
 
+// Every claude call runs as a fresh install would: an empty config dir (so
+// nothing saved by your own sessions changes the outcome) and no credentials
+// (so nothing ever reaches the model).
+const CONFIG = mkdtempSync(join(tmpdir(), 'claude-mods-'))
+const ENV = { ...process.env, CLAUDE_CONFIG_DIR: CONFIG, CLAUDE_CODE_ENABLE_FUNCTION_HOOKS: '1' }
+for (const key of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN']) delete ENV[key]
+process.on('exit', () => rmSync(CONFIG, { recursive: true, force: true }))
+
 const run = (bin, argv, options = {}) => {
   const command = join(BIN, isWindows ? `${bin}.cmd` : bin)
   console.log(`$ ${bin} ${argv.join(' ')}`)
@@ -38,7 +46,7 @@ const run = (bin, argv, options = {}) => {
     cwd: ROOT,
     stdio: options.isQuiet ? 'pipe' : 'inherit',
     shell: isWindows,
-    env: options.env ?? process.env,
+    env: ENV,
     timeout: options.timeoutMs,
   })
 
@@ -58,7 +66,12 @@ const checkMarketplace = () => {
 
   for (const mod of allMods()) {
     const entry = listed.get(mod)
-    const manifest = readJson(join(PLUGINS, mod, '.claude-plugin', 'plugin.json'))
+    const manifestPath = join(PLUGINS, mod, '.claude-plugin', 'plugin.json')
+    if (!existsSync(manifestPath)) {
+      problems.push(`plugins/${mod}: no .claude-plugin/plugin.json`)
+      continue
+    }
+    const manifest = readJson(manifestPath)
 
     if (manifest.name !== mod) problems.push(`plugins/${mod}: plugin.json name is "${manifest.name}"`)
     if (!entry) {
@@ -81,17 +94,11 @@ const checkMarketplace = () => {
 }
 
 // Loading a mod makes Claude Code write the API's types for its build into
-// <mod>/.claude-plugin/types. The load happens even when the run is not logged
-// in, so the run gets an empty config dir and no credentials: it never reaches
-// the model, and it exits non-zero, which is expected.
+// <mod>/.claude-plugin/types. The load happens even though the run is not
+// logged in; the run then stops with "Not logged in", which is expected.
 const writeTypes = dir => {
-  const config = mkdtempSync(join(tmpdir(), 'claude-mods-'))
-  const env = { ...process.env, CLAUDE_CONFIG_DIR: config, CLAUDE_CODE_ENABLE_FUNCTION_HOOKS: '1' }
-  for (const key of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN']) delete env[key]
-
   rmSync(join(dir, '.claude-plugin', 'types'), { recursive: true, force: true })
-  run('claude', ['-p', '--plugin-dir', dir, 'types'], { env, isQuiet: true, timeoutMs: 60_000 })
-  rmSync(config, { recursive: true, force: true })
+  run('claude', ['-p', '--plugin-dir', dir, 'types'], { isQuiet: true, timeoutMs: 60_000 })
 
   return existsSync(join(dir, '.claude-plugin', 'types', 'claude-code', 'index.d.ts'))
 }
