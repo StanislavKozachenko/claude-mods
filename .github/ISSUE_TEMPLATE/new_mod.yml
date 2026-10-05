@@ -1,0 +1,21 @@
+name: New mod
+description: Propose a mod for the collection
+labels: [new mod]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What it does
+      description: The behaviour a person sees, in a few sentences
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How
+      description: The events it hooks and what it needs from `$` (tool.call, ui.render, command.run, ...)
+  - type: textarea
+    id: why
+    attributes:
+      label: Why a shared mod
+      description: Why this belongs here rather than in your own settings or a built-in

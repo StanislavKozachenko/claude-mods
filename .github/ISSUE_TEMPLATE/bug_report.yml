@@ -1,0 +1,25 @@
+name: Bug report
+description: A mod does something wrong or does not load
+labels: [bug]
+body:
+  - type: input
+    id: mod
+    attributes:
+      label: Mod
+      placeholder: guard
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Claude Code version
+      description: Output of `claude --version`
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead. Include the dim transcript line naming the mod if there is one.
+    validations:
+      required: true
