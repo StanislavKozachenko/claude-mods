@@ -1,0 +1,42 @@
+{
+  "name": "redact",
+  "version": "0.0.0",
+  "description": "Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends",
+  "author": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "homepage": "https://github.com/StanislavKozachenko/claude-mods/tree/main/plugins/redact",
+  "repository": "https://github.com/StanislavKozachenko/claude-mods",
+  "license": "MIT",
+  "keywords": ["security", "secrets", "redaction", "privacy"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "prompts": {
+      "type": "boolean",
+      "title": "Redact your prompts too",
+      "description": "Also hide secrets you paste into a prompt (off: a key you hand over on purpose reaches the model)",
+      "default": false
+    },
+    "generic": {
+      "type": "boolean",
+      "title": "Secret-named values",
+      "description": "Also hide values under secret-looking names (DB_PASSWORD=..., \"apiKey\": \"...\") that have no known format",
+      "default": true
+    },
+    "patterns": {
+      "type": "string",
+      "multiple": true,
+      "title": "Extra patterns",
+      "description": "Regular expressions whose matches are hidden as [redacted:custom]",
+      "default": []
+    },
+    "allow": {
+      "type": "string",
+      "multiple": true,
+      "title": "Never redact",
+      "description": "Exact values that are not secrets (a public test key, a sample token)",
+      "default": []
+    }
+  }
+}
