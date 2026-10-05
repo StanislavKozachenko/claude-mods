@@ -4,3 +4,7 @@ node_modules/
 
 # Written by Claude Code when it loads a mod (types for its build)
 .claude-plugin/types/
+
+# Written by scripts/release.mjs and the Release workflow
+release-notes.md
+commit.json
