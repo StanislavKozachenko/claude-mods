@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [notify 0.2.0] - 2026-10-05
+
+### Added
+
+- **Breaking:** budget notifications, one switch per notification (#27)
+
+---
+
 ## [ci-budget 0.1.0] - 2026-10-05
 
 ### Added
