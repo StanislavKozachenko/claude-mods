@@ -1,5 +1,6 @@
 import type { CommandRunInput, On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
+import type { Engine } from 'claude-code/testing'
 
 // The engine beneath the mod: a Windows host whose process runs are recorded,
 // a clock the test moves, and calls that pass.
@@ -66,7 +67,7 @@ test('other notification types are left to Claude Code', async ($, on) => {
   expect(toasts()).toEqual([])
 })
 
-test('events limits what is sent', { options: { events: ['permission'] } }, async ($, on) => {
+test('done: false sends no done notification', { options: { done: false } }, async ($, on) => {
   const { toasts } = engine(on)
   await $.turn.complete(complete(125_000))
   expect(toasts()).toEqual([])
@@ -131,4 +132,111 @@ test('a missing notifier says how to install it', async ($, on) => {
   const { text } = await $.command.run(TEST_COMMAND)
   expect(text).toContain('notify-send could not start')
   expect(text).toContain('libnotify')
+})
+
+// ci-budget's measurement, as it writes it to its own state
+const snapshot = (percent: number, extra: object = {}) => ({
+  owner: 'acme',
+  ownerType: 'Organization',
+  period: '2026-10',
+  source: 'billing',
+  minutes: { Linux: percent * 20 },
+  quotaMinutes: percent * 20,
+  includedMinutes: 2000,
+  percent,
+  hints: [],
+  at: 0,
+  ...extra,
+})
+
+// A store in memory, as the engine keeps notify's own
+const withStore = (on: On) => {
+  const store = new Map<string, unknown>()
+  on('store.get', (_$, e) => ({ value: store.get(e.key) }))
+  on('store.set', (_$, e) => {
+    store.set(e.key, e.value)
+    return { value: undefined }
+  })
+  return store
+}
+
+// Stands for ci-budget: a plugin of that name writing its own snapshot state,
+// as the real one does after each measurement; /measure <json> writes one.
+// "other" writes a snapshot of the same key name under its own name.
+const CI_BUDGET = {
+  name: 'ci-budget',
+  register: ((on: On) => {
+    on('command.run', { command: 'measure' }, async ($, e) => {
+      await $.state.set({ plugin: 'ci-budget', key: 'snapshot' } as never, JSON.parse(e.args) as never)
+      return { text: 'measured' }
+    })
+  }) as never,
+}
+const OTHER = {
+  name: 'other',
+  register: ((on: On) => {
+    on('command.run', { command: 'measure-other' }, async ($, e) => {
+      await $.state.set({ plugin: 'other', key: 'snapshot' } as never, JSON.parse(e.args) as never)
+      return { text: 'measured' }
+    })
+  }) as never,
+}
+const WITH_CI_BUDGET = { plugins: [CI_BUDGET, OTHER] }
+
+const measure = ($: Engine, value: object, plugin = 'ci-budget') =>
+  $.command.run({
+    command: plugin === 'ci-budget' ? 'measure' : 'measure-other',
+    args: JSON.stringify(value),
+    origin: { kind: 'composer' },
+    presentation: { isFullscreen: false, columns: 80 },
+  } as never)
+
+test('a budget past budgetPercent notifies once, and again at 100%', WITH_CI_BUDGET, async ($, on) => {
+  const { toasts } = engine(on)
+  withStore(on)
+
+  await measure($, snapshot(70))
+  expect(toasts()).toEqual([])
+  await measure($, snapshot(85))
+  await measure($, snapshot(90))
+  expect(toasts()).toEqual([
+    { title: 'Claude Code · app', body: 'Actions budget: acme has used 85% of its included minutes this month (1700 of 2000 minutes)' },
+  ])
+  await measure($, snapshot(100))
+  expect(toasts()).toHaveLength(2)
+  await measure($, snapshot(120))
+  expect(toasts()).toHaveLength(2)
+})
+
+test('the budget notification is remembered per owner and month across sessions', WITH_CI_BUDGET, async ($, on) => {
+  const { toasts } = engine(on)
+  const store = withStore(on)
+  store.set('budget:acme:2026-10', 1)
+
+  await measure($, snapshot(85))
+  expect(toasts()).toEqual([])
+  await measure($, snapshot(85, { period: '2026-11' }))
+  expect(toasts()).toHaveLength(1)
+})
+
+test('budget: false sends nothing', { ...WITH_CI_BUDGET, options: { budget: false } }, async ($, on) => {
+  const { toasts } = engine(on)
+  withStore(on)
+  await measure($, snapshot(95))
+  expect(toasts()).toEqual([])
+})
+
+test('an estimate, or a snapshot of another plugin, sends nothing', WITH_CI_BUDGET, async ($, on) => {
+  const { toasts } = engine(on)
+  withStore(on)
+  await measure($, snapshot(95, { source: 'estimate' }))
+  await measure($, snapshot(95), 'other')
+  expect(toasts()).toEqual([])
+})
+
+test('budgetPercent sets the threshold', { ...WITH_CI_BUDGET, options: { budgetPercent: 50 } }, async ($, on) => {
+  const { toasts } = engine(on)
+  withStore(on)
+  await measure($, snapshot(55))
+  expect(toasts()).toHaveLength(1)
 })

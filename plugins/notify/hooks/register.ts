@@ -1,10 +1,7 @@
 import type { EngineInterface, Register } from 'claude-code'
 
-import { doneToast, permissionToast, questionToast, title, toastCommand } from './toast'
-import type { Platform, Toast } from './toast'
-
-const EVENTS = ['done', 'permission', 'question'] as const
-type NotifyEvent = (typeof EVENTS)[number]
+import { budgetLevel, budgetToast, doneToast, permissionToast, questionToast, title, toastCommand } from './toast'
+import type { BudgetSnapshot, Platform, Toast } from './toast'
 
 let platform: Platform | undefined
 
@@ -58,9 +55,25 @@ function showUnlessAnswered($: EngineInterface, toast: Toast, delayMs: number, i
   })
 }
 
+/**
+ * Sends the budget notification a ci-budget measurement is worth, once per
+ * owner, month and level (threshold, then 100%), across sessions.
+ */
+async function notifyBudget($: EngineInterface, snapshot: BudgetSnapshot, threshold: number, isSpoken: boolean) {
+  const level = budgetLevel(snapshot, threshold)
+  if (level === 0) return
+
+  const key = `budget:${String(snapshot.owner)}:${String(snapshot.period)}`
+  const sent = Number((await $.store.get(key)) ?? 0)
+  if (level <= sent) return
+
+  await $.store.set(key, level)
+  await show($, budgetToast(await $.session.cwd(), snapshot), isSpoken)
+}
+
 export const register: Register = (on, options) => {
-  const listed = Array.isArray(options.events) ? options.events : EVENTS
-  const events = new Set(listed.filter((event): event is NotifyEvent => (EVENTS as readonly string[]).includes(event)))
+  const isOn = (name: string) => options[name] !== false
+  const budgetPercent = Math.min(100, Math.max(1, Number(options.budgetPercent ?? 80)))
   const minMs = Math.max(0, Number(options.minSeconds ?? 30)) * 1000
   const delayMs = Math.max(0, Number(options.permissionDelaySeconds ?? 10)) * 1000
   const isSpoken = options.speak === true
@@ -88,7 +101,7 @@ export const register: Register = (on, options) => {
   on('tool.call', async ($, e, next) => {
     activity += 1
     // AskUserQuestion holds the call until the person answers
-    if (events.has('question') && String(e.tool) === 'AskUserQuestion') {
+    if (isOn('question') && String(e.tool) === 'AskUserQuestion') {
       const { questions } = e as { questions?: { question?: unknown }[] }
       const question = questions?.[0]?.question
       showUnlessAnswered($, questionToast(await $.session.cwd(), typeof question === 'string' ? question : ''), delayMs, isSpoken)
@@ -100,7 +113,7 @@ export const register: Register = (on, options) => {
   })
 
   on('classic.Notification', async ($, e, next) => {
-    if (events.has('permission') && e.notification_type === 'permission_prompt') {
+    if (isOn('permission') && e.notification_type === 'permission_prompt') {
       showUnlessAnswered($, permissionToast(await $.session.cwd(), e.message), delayMs, isSpoken)
     }
 
@@ -111,11 +124,23 @@ export const register: Register = (on, options) => {
     const done = await next(e)
     activity += 1
     // An interrupted turn was stopped by the person, who is there to see it
-    if (events.has('done') && e.agentId === undefined && !e.isAborted && e.durationMs >= minMs) {
+    if (isOn('done') && e.agentId === undefined && !e.isAborted && e.durationMs >= minMs) {
       await show($, doneToast(await $.session.cwd(), e.durationMs, e.answer), isSpoken)
     }
 
     return done
+  })
+
+  // ci-budget, when it is installed, writes its measurement to its own state;
+  // watching that write needs no dependency on it.
+  on('state.set', async ($, e, next) => {
+    const written = await next(e)
+    const write = e as unknown as { plugin?: string; key?: string; value?: unknown }
+    if (isOn('budget') && write.plugin === 'ci-budget' && write.key === 'snapshot' && write.value !== null && typeof write.value === 'object') {
+      await notifyBudget($, write.value as BudgetSnapshot, budgetPercent, isSpoken)
+    }
+
+    return written
   })
 
   on('command.run', { command: 'notify' }, async ($, e) => {
