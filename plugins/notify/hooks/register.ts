@@ -19,6 +19,9 @@ async function detectPlatform($: EngineInterface): Promise<Platform> {
   if (platform) return platform
   if ((await $.env.get('OS')) === 'Windows_NT') {
     platform = 'windows'
+  } else if ((await $.env.get('WSL_DISTRO_NAME')) !== undefined) {
+    // Linux under WSL draws on the Windows desktop, where notify-send shows nothing
+    platform = 'wsl'
   } else {
     const uname = await $.process.run(['uname', '-s'], { timeoutMs: 5_000 }).catch(() => undefined)
     platform = uname?.stdout.trim() === 'Darwin' ? 'macos' : 'linux'
@@ -27,14 +30,23 @@ async function detectPlatform($: EngineInterface): Promise<Platform> {
   return platform
 }
 
+/** What to do when a platform's notifier is missing. */
+const INSTALL_HINT: Record<Platform, string> = {
+  windows: 'Windows PowerShell ships with Windows 10 and 11; check that powershell is on PATH.',
+  wsl: 'Check that WSL interop is on (powershell.exe must run from WSL).',
+  macos: 'osascript ships with macOS; check that /usr/bin is on PATH.',
+  linux: 'Install libnotify (apt install libnotify-bin, dnf install libnotify, pacman -S libnotify).',
+}
+
 /** Shows the toast; resolves to why it failed, or undefined. */
 async function show($: EngineInterface, toast: Toast, isSpoken: boolean): Promise<string | undefined> {
   const command = toastCommand(await detectPlatform($), toast)
   const ran = await $.process
     .run(command.argv, { ...(command.stdin === undefined ? {} : { stdin: command.stdin }), timeoutMs: 15_000 })
-    .catch((error: unknown) => ({ exitCode: -1, stdout: '', stderr: String(error) }))
+    .catch(() => undefined)
   if (isSpoken) await $.audio.speak(toast.body).catch(() => undefined)
 
+  if (ran === undefined) return `${command.argv[0]} could not start. ${INSTALL_HINT[platform ?? 'linux']}`
   return ran.exitCode === 0 ? undefined : ran.stderr.trim() || `exit code ${ran.exitCode}`
 }
 

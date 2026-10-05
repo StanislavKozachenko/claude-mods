@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { doneToast, firstLine, formatDuration, permissionToast, questionToast, title, toastCommand } from '../hooks/toast'
+import { asciiJson, doneToast, firstLine, formatDuration, permissionToast, questionToast, title, toastCommand } from '../hooks/toast'
 
 const TOAST = { title: 'Claude Code · app', body: `Done: it's "quoted" $(rm -rf ~) \`x\`` }
 
@@ -10,6 +10,14 @@ describe('toastCommand', () => {
     expect(command.argv[0]).toBe('powershell')
     expect(JSON.parse(command.stdin ?? '')).toEqual(TOAST)
     expect(command.argv.join(' ')).not.toContain('quoted')
+  })
+
+  test('windows: the JSON on stdin is ASCII alone, whatever the language', async () => {
+    const toast = { title: 'Claude Code · проект', body: 'Вопрос: какую базу выбрать? 🚀' }
+    const stdin = toastCommand('windows', toast).stdin ?? ''
+    expect(/^[\x00-\x7f]*$/.test(stdin)).toBe(true)
+    expect(JSON.parse(stdin)).toEqual(toast)
+    expect(asciiJson('·')).toBe('"\\u00b7"')
   })
 
   test('macos: AppleScript takes the text as argv', async () => {

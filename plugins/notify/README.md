@@ -18,11 +18,12 @@ The title names the project folder, so two sessions are told apart. A prompt you
 
 No dependencies, and the text never passes through a shell or into a script:
 
-- **Windows**: a WinRT toast through Windows PowerShell; the title and body arrive as JSON on stdin
+- **Windows**: a WinRT toast through Windows PowerShell; the title and body arrive on stdin as ASCII-only JSON, so any language reads right whatever the console code page
 - **macOS**: `osascript`, the texts passed as AppleScript arguments
-- **Linux**: `notify-send` (libnotify), the texts after `--`
+- **Linux**: `notify-send` from libnotify (`apt install libnotify-bin`, `dnf install libnotify`, `pacman -S libnotify`), the texts after `--`
+- **WSL**: the Windows toast through `powershell.exe`, since WSL draws on the Windows desktop
 
-`/notify test` sends a sample, and says why if it could not.
+`/notify test` sends a sample, and says why if it could not (a missing notifier comes with how to install it). Windows shows one toast at a time: one sent while another is on screen goes straight to the notification centre.
 
 ## Options
 

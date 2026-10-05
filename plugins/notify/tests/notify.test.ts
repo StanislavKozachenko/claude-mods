@@ -83,3 +83,52 @@ test('/notify test sends a sample', async ($, on) => {
   expect((await $.command.run(input)).text).toBe('Sent a test notification (windows).')
   expect(toasts()).toEqual([{ title: 'Claude Code · app', body: 'Notifications work.' }])
 })
+
+// Hosts other than Windows: what the environment says, what `uname -s`
+// answers, and whether the notifier exists.
+const host = (on: On, env: Record<string, string>, uname: string, isNotifierMissing = false) => {
+  const runs: (readonly string[])[] = []
+  mock.env(on, env)
+  on('process.run', (_$, e) => {
+    runs.push(e.argv)
+    if (e.argv[0] === 'uname') return { value: { exitCode: 0, stdout: `${uname}\n`, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    if (isNotifierMissing) throw new Error(`spawn ${e.argv[0]} ENOENT`)
+    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  on('session.cwd', () => ({ value: '/home/me/app' }) as never)
+
+  return runs
+}
+
+const TEST_COMMAND: CommandRunInput = {
+  command: 'notify',
+  args: 'test',
+  origin: { kind: 'composer' } as CommandRunInput['origin'],
+  presentation: { isFullscreen: false, columns: 100 },
+}
+
+test('macOS is told apart by uname and notified through osascript', async ($, on) => {
+  const runs = host(on, {}, 'Darwin')
+  expect((await $.command.run(TEST_COMMAND)).text).toBe('Sent a test notification (macos).')
+  expect(runs.at(-1)?.[0]).toBe('osascript')
+})
+
+test('Linux is notified through notify-send', async ($, on) => {
+  const runs = host(on, {}, 'Linux')
+  expect((await $.command.run(TEST_COMMAND)).text).toBe('Sent a test notification (linux).')
+  expect(runs.at(-1)?.slice(0, 3)).toEqual(['notify-send', '--app-name=Claude Code', '--'])
+})
+
+test('WSL notifies on the Windows desktop through powershell.exe', async ($, on) => {
+  const runs = host(on, { WSL_DISTRO_NAME: 'Ubuntu' }, 'Linux')
+  expect((await $.command.run(TEST_COMMAND)).text).toBe('Sent a test notification (wsl).')
+  expect(runs.at(-1)?.[0]).toBe('powershell.exe')
+  expect(runs.some(argv => argv[0] === 'uname')).toBe(false)
+})
+
+test('a missing notifier says how to install it', async ($, on) => {
+  host(on, {}, 'Linux', true)
+  const { text } = await $.command.run(TEST_COMMAND)
+  expect(text).toContain('notify-send could not start')
+  expect(text).toContain('libnotify')
+})

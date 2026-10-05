@@ -1,7 +1,7 @@
 // How a toast is shown on each platform, and the texts it carries, as pure
 // functions: no `$`, so tests call them directly.
 
-export type Platform = 'windows' | 'macos' | 'linux'
+export type Platform = 'windows' | 'wsl' | 'macos' | 'linux'
 
 export type Toast = { title: string; body: string }
 
@@ -11,6 +11,9 @@ export type Command = { argv: string[]; stdin?: string }
 // WinRT toast through Windows PowerShell, which every Windows 10/11 has. The
 // title and body arrive as JSON on stdin; the AppUserModelID is PowerShell's
 // own, so no shortcut or registration is needed.
+//
+// PowerShell decodes stdin with the console code page (CP866, CP1251, ...), so
+// the JSON is sent as ASCII alone, see asciiJson.
 const WINDOWS_SCRIPT = [
   '$toast = [Console]::In.ReadToEnd() | ConvertFrom-Json',
   '[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null',
@@ -25,11 +28,15 @@ const WINDOWS_SCRIPT = [
 // AppleScript reads the texts from its argv, so they are never parsed as code.
 const MACOS_SCRIPT = ['on run argv', 'display notification (item 2 of argv) with title (item 1 of argv)', 'end run']
 
+/** JSON with every non-ASCII character as a `\uXXXX` escape: the same text in any code page. */
+export const asciiJson = (value: unknown) =>
+  JSON.stringify(value).replace(/[\u0080-￿]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`)
+
 export function toastCommand(platform: Platform, toast: Toast): Command {
-  if (platform === 'windows') {
+  if (platform === 'windows' || platform === 'wsl') {
     return {
-      argv: ['powershell', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', WINDOWS_SCRIPT],
-      stdin: JSON.stringify(toast),
+      argv: [platform === 'wsl' ? 'powershell.exe' : 'powershell', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', WINDOWS_SCRIPT],
+      stdin: asciiJson(toast),
     }
   }
   if (platform === 'macos') {
