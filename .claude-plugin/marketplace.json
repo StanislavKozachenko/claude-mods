@@ -20,6 +20,19 @@
         "bash",
         "secrets"
       ]
+    },
+    {
+      "name": "context-bar",
+      "source": "./plugins/context-bar",
+      "version": "0.0.0",
+      "description": "Shows the context window as a stacked bar above the prompt, one colour per /context category; /context-bar toggles it",
+      "category": "productivity",
+      "keywords": [
+        "context",
+        "tokens",
+        "ui",
+        "status"
+      ]
     }
   ]
 }

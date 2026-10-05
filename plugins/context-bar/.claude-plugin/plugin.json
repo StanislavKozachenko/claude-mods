@@ -1,0 +1,28 @@
+{
+  "name": "context-bar",
+  "version": "0.0.0",
+  "description": "Shows the context window as a stacked bar above the prompt, one colour per /context category; /context-bar toggles it",
+  "author": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "homepage": "https://github.com/StanislavKozachenko/claude-mods/tree/main/plugins/context-bar",
+  "repository": "https://github.com/StanislavKozachenko/claude-mods",
+  "license": "MIT",
+  "keywords": ["context", "tokens", "ui", "status"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "legend": {
+      "type": "boolean",
+      "title": "Legend",
+      "description": "Show a second row naming the largest categories and their tokens",
+      "default": true
+    },
+    "refreshSeconds": {
+      "type": "number",
+      "title": "Refresh during a turn",
+      "description": "Re-measure after a tool call at most this often, in seconds (the bar always updates when a turn ends)",
+      "default": 5
+    }
+  }
+}
