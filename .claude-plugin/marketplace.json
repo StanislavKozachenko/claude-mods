@@ -1,0 +1,11 @@
+{
+  "name": "claude-mods",
+  "owner": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "metadata": {
+    "description": "A collection of Claude Code mods, shipped as plugins"
+  },
+  "plugins": []
+}
