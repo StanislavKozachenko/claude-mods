@@ -9,6 +9,7 @@ on:
         type: choice
         # scripts/check.mjs fails when a mod is missing here
         options:
+          - ci-budget
           - context-bar
           - guard
           - notify

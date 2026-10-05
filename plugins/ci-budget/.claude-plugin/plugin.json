@@ -1,0 +1,59 @@
+{
+  "name": "ci-budget",
+  "version": "0.0.0",
+  "description": "Keeps GitHub Actions spend in sight: the month's minutes and cost for the repo's organisation or account, GitHub budgets, cache and artifacts, risky workflows as they are written, and runs that hang",
+  "author": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "homepage": "https://github.com/StanislavKozachenko/claude-mods/tree/main/plugins/ci-budget",
+  "repository": "https://github.com/StanislavKozachenko/claude-mods",
+  "license": "MIT",
+  "keywords": ["github", "actions", "ci", "billing", "budget", "minutes"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "warnAt": {
+      "type": "string",
+      "multiple": true,
+      "title": "Warn at (% of included minutes)",
+      "description": "A toast when the owner's usage crosses each of these percentages",
+      "default": ["80"]
+    },
+    "blockAt": {
+      "type": "number",
+      "title": "Block gh workflow run at (%)",
+      "description": "Deny `gh workflow run` from this share of the included minutes (billing data only); 0 never blocks",
+      "default": 100
+    },
+    "includedMinutes": {
+      "type": "number",
+      "title": "Included minutes",
+      "description": "Minutes included per month; 0 takes them from the owner's plan (Free 2000, Pro and Team 3000, Enterprise 50000)",
+      "default": 0
+    },
+    "stuckMinutes": {
+      "type": "number",
+      "title": "A job is stuck after (minutes)",
+      "description": "While watching the runs of a push, warn about a job running longer than this",
+      "default": 30
+    },
+    "refreshMinutes": {
+      "type": "number",
+      "title": "Refresh every (minutes)",
+      "description": "How often usage is read again during a session",
+      "default": 15
+    },
+    "lint": {
+      "type": "boolean",
+      "title": "Check workflows as they are written",
+      "description": "Flag spend risks when a .github/workflows file is written or edited",
+      "default": true
+    },
+    "watch": {
+      "type": "boolean",
+      "title": "Watch runs after a push",
+      "description": "Follow the runs a git push or gh workflow run starts and flag stuck jobs",
+      "default": true
+    }
+  }
+}

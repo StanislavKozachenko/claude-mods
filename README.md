@@ -20,6 +20,7 @@ Add the marketplace once, then install the mods you want:
 
 | Mod | What it does |
 | --- | --- |
+| [ci-budget](plugins/ci-budget) | Keeps GitHub Actions spend in sight: this month's minutes and cost for the repo's organisation or account, GitHub budgets, risky workflows as they are written, and runs that hang |
 | [context-bar](plugins/context-bar) | Shows the context window as a stacked bar above the prompt, one colour per `/context` category; `/context-bar` toggles it |
 | [guard](plugins/guard) | Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command |
 | [notify](plugins/notify) | Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you |
