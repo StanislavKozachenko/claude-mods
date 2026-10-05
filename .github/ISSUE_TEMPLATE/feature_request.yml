@@ -1,0 +1,17 @@
+name: Feature request
+description: Improve an existing mod
+labels: [enhancement]
+body:
+  - type: input
+    id: mod
+    attributes:
+      label: Mod
+      placeholder: guard
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+    validations:
+      required: true
