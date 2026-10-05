@@ -37,7 +37,7 @@
     {
       "name": "notify",
       "source": "./plugins/notify",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "description": "Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you",
       "category": "productivity",
       "keywords": [

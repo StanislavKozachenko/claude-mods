@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [notify 0.1.0] - 2026-10-05
+
+### Added
+
+- add the notify mod (#21)
+
+---
+
 ## [turn-stats 0.1.0] - 2026-10-05
 
 ### Added
