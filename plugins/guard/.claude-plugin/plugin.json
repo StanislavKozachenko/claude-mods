@@ -1,0 +1,56 @@
+{
+  "name": "guard",
+  "version": "0.0.0",
+  "description": "Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command",
+  "author": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "homepage": "https://github.com/StanislavKozachenko/claude-mods/tree/main/plugins/guard",
+  "repository": "https://github.com/StanislavKozachenko/claude-mods",
+  "license": "MIT",
+  "keywords": ["security", "guard", "bash", "secrets", "safety"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "destructive": {
+      "type": "boolean",
+      "title": "Block destructive commands",
+      "description": "rm -rf on dangerous targets, git push --force, git reset --hard, git clean -f, chmod -R 777, mkfs, dd to devices, curl | sh",
+      "default": true
+    },
+    "rmMode": {
+      "type": "string",
+      "title": "rm -rf",
+      "description": "dangerous: block rm -rf only on roots, homes, the project itself and bare variables; any: block every rm -rf",
+      "options": ["dangerous", "any"],
+      "default": "dangerous"
+    },
+    "secrets": {
+      "type": "boolean",
+      "title": "Protect secret files",
+      "description": ".env*, keys, certificates, .npmrc, cloud credentials (Read, Edit, Write, Grep and shell commands that read or copy them)",
+      "default": true
+    },
+    "blockCommands": {
+      "type": "string",
+      "multiple": true,
+      "title": "Blocked command patterns",
+      "description": "Extra regular expressions tested against every Bash command",
+      "default": []
+    },
+    "protectPaths": {
+      "type": "string",
+      "multiple": true,
+      "title": "Protected paths",
+      "description": "Extra globs (gitignore-like) no tool may read or write, e.g. migrations/** or *.lock",
+      "default": []
+    },
+    "allowPaths": {
+      "type": "string",
+      "multiple": true,
+      "title": "Allowed paths",
+      "description": "Globs exempt from the secret-file and protected-path rules, e.g. test/fixtures/.env",
+      "default": []
+    }
+  }
+}

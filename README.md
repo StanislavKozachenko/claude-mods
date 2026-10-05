@@ -20,6 +20,7 @@ Add the marketplace once, then install the mods you want:
 
 | Mod | What it does |
 | --- | --- |
+| [guard](plugins/guard) | Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command |
 
 ## Develop
 
