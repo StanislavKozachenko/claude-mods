@@ -85,3 +85,33 @@ export const questionToast = (cwd: string, question: string): Toast => ({
   title: title(cwd),
   body: `Question: ${firstLine(question) || 'Claude is asking you something'}`,
 })
+
+/** What ci-budget keeps in its `snapshot` state, as far as a budget notification reads it. */
+export type BudgetSnapshot = {
+  owner?: unknown
+  period?: unknown
+  source?: unknown
+  percent?: unknown
+  quotaMinutes?: unknown
+  includedMinutes?: unknown
+}
+
+/**
+ * Which budget notification a measurement is worth: 2 at 100% or more, 1 from
+ * the threshold, 0 below it or without exact billing numbers.
+ */
+export function budgetLevel(snapshot: BudgetSnapshot, threshold: number): 0 | 1 | 2 {
+  if (snapshot.source !== 'billing' || typeof snapshot.percent !== 'number') return 0
+  if (snapshot.percent >= 100) return 2
+  return snapshot.percent >= threshold ? 1 : 0
+}
+
+export const budgetToast = (cwd: string, snapshot: BudgetSnapshot): Toast => {
+  const used = typeof snapshot.quotaMinutes === 'number' ? Math.round(snapshot.quotaMinutes) : undefined
+  const included = typeof snapshot.includedMinutes === 'number' ? snapshot.includedMinutes : undefined
+  const minutes = used !== undefined && included !== undefined ? ` (${used} of ${included} minutes)` : ''
+  return {
+    title: title(cwd),
+    body: `Actions budget: ${String(snapshot.owner)} has used ${String(snapshot.percent)}% of its included minutes this month${minutes}`,
+  }
+}

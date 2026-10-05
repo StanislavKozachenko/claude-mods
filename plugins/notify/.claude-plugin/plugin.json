@@ -1,7 +1,7 @@
 {
   "name": "notify",
   "version": "0.1.0",
-  "description": "Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you",
+  "description": "Native desktop notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting for you, an Actions budget running low",
   "author": {
     "name": "Stanislav Kozachenko",
     "url": "https://github.com/StanislavKozachenko"
@@ -11,12 +11,35 @@
   "license": "MIT",
   "keywords": ["notifications", "toast", "desktop", "permission"],
   "userConfig": {
-    "events": {
-      "type": "string",
-      "multiple": true,
-      "title": "Notify about",
-      "description": "done: a long turn finished; permission: a permission prompt is waiting; question: Claude asked you a question",
-      "default": ["done", "permission", "question"]
+    "done": {
+      "type": "boolean",
+      "title": "A long turn finished",
+      "description": "Notify when a turn longer than the shortest turn below finishes, with the first line of the answer",
+      "default": true
+    },
+    "permission": {
+      "type": "boolean",
+      "title": "A permission prompt is waiting",
+      "description": "Notify when a permission prompt is still unanswered after the wait below",
+      "default": true
+    },
+    "question": {
+      "type": "boolean",
+      "title": "A question is waiting",
+      "description": "Notify when a question Claude asked is still unanswered after the wait below",
+      "default": true
+    },
+    "budget": {
+      "type": "boolean",
+      "title": "An Actions budget is running low",
+      "description": "With the ci-budget mod installed: notify when the repo owner's Actions usage reaches the percentage below, and again at 100%",
+      "default": true
+    },
+    "budgetPercent": {
+      "type": "number",
+      "title": "Budget notification at (%)",
+      "description": "Share of the included Actions minutes that triggers the budget notification",
+      "default": 80
     },
     "minSeconds": {
       "type": "number",
