@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+*.log
+
+# Written by Claude Code when it loads a mod (types for its build)
+.claude-plugin/types/
