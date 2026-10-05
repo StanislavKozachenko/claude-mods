@@ -22,7 +22,18 @@ The short form clones over SSH. Without a GitHub SSH key (the add fails with `Ho
 /plugin marketplace add https://github.com/StanislavKozachenko/claude-mods.git
 ```
 
-`/plugin update <mod>@claude-mods` picks up a new release.
+## Updates
+
+Claude Code does not update mods from this marketplace by itself: auto-update is on by default only for Anthropic's own marketplaces. To turn it on, open `/plugin`, go to **Marketplaces**, select **claude-mods** and enable auto-update. Claude Code then checks after the first message of a session, within about ten minutes, and installs new releases; a restart applies them.
+
+By hand:
+
+```text
+/plugin marketplace update claude-mods
+/plugin update <mod>@claude-mods
+```
+
+An update arrives with a release, when the mod's version changes, not with every commit to the repository. Each mod's releases and what changed are on the [releases page](https://github.com/StanislavKozachenko/claude-mods/releases) and in [CHANGELOG.md](CHANGELOG.md).
 
 ## Mods
 
