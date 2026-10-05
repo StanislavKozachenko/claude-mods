@@ -66,7 +66,12 @@ const checkMarketplace = () => {
 
   for (const mod of allMods()) {
     const entry = listed.get(mod)
-    const manifest = readJson(join(PLUGINS, mod, '.claude-plugin', 'plugin.json'))
+    const manifestPath = join(PLUGINS, mod, '.claude-plugin', 'plugin.json')
+    if (!existsSync(manifestPath)) {
+      problems.push(`plugins/${mod}: no .claude-plugin/plugin.json`)
+      continue
+    }
+    const manifest = readJson(manifestPath)
 
     if (manifest.name !== mod) problems.push(`plugins/${mod}: plugin.json name is "${manifest.name}"`)
     if (!entry) {
