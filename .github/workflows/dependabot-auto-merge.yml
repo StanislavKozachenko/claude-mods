@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Read update metadata
         id: meta
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
 
       # Patch and minor updates merge on their own once the required `CI ok`
       # check is green (auto-merge waits for it). A major update, or a Claude
