@@ -90,9 +90,12 @@ export const register: Register = (on, options) => {
     return verdict ? deny($, e.tool, verdict) : next(e)
   })
 
-  on('tool.call', { tool: 'Grep' }, async ($, e, next) => {
-    if (await read($, isPaused)) return next(e)
-    const verdict = await checkFile($, e.path, policy)
+  // Grep is a built-in tool on some builds only (others search through Bash),
+  // so it is matched by name rather than by this build's tool types.
+  on('tool.call', async ($, e, next) => {
+    if (String(e.tool) !== 'Grep' || (await read($, isPaused))) return next(e)
+    const { path } = e as { path?: unknown }
+    const verdict = typeof path === 'string' ? await checkFile($, path, policy) : undefined
 
     return verdict ? deny($, e.tool, verdict) : next(e)
   })

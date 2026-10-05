@@ -36,7 +36,7 @@ test('denies reading and writing secret files', async ($, on) => {
   expect(
     (await $.tool.call({ tool: 'Edit', file_path: '/repo/id_rsa', old_string: 'a', new_string: 'b' })).deny,
   ).toContain('secret-file')
-  expect((await $.tool.call({ tool: 'Grep', pattern: 'KEY', path: '/repo/.env' })).deny).toContain('secret-file')
+  expect((await $.tool.call({ tool: 'Grep', pattern: 'KEY', path: '/repo/.env' } as never)).deny).toContain('secret-file')
   expect((await $.tool.call({ tool: 'Read', file_path: '/repo/.env.example' })).deny).toBeUndefined()
 })
 
