@@ -307,7 +307,16 @@ function startWatch($: EngineInterface, repo: string, query: string, trigger: st
   $.clock.after(15_000, () => void poll())
 }
 
-function report(measured: CiBudgetSnapshot | null, watching: CiBudgetWatch | null, paused: boolean, blockAt: number): string {
+/** notify turns the budget warning into a desktop notification; it registers /notify. */
+async function hasNotify($: EngineInterface): Promise<boolean> {
+  const commands = await $.command.list().catch(() => [])
+  return commands.some(command => command.name === 'notify')
+}
+
+const NOTIFY_HINT =
+  'For a desktop notification when the budget runs low, install the notify mod: /plugin install notify@claude-mods.'
+
+function report(measured: CiBudgetSnapshot | null, watching: CiBudgetWatch | null, paused: boolean, blockAt: number, isNotifyMissing: boolean): string {
   if (!measured) return 'Not measured yet: /ci-budget refresh.'
   const lines: string[] = []
   const source = { billing: 'from GitHub billing', estimate: "estimated from this repo's jobs", none: 'no usage data' }[measured.source]
@@ -346,6 +355,7 @@ function report(measured: CiBudgetSnapshot | null, watching: CiBudgetWatch | nul
       : 'gh workflow run is never blocked (blockAt 0).',
   )
   for (const hint of measured.hints) lines.push(`→ ${hint}`)
+  if (isNotifyMissing && measured.source === 'billing') lines.push(`→ ${NOTIFY_HINT}`)
 
   return lines.join('\n')
 }
@@ -437,7 +447,7 @@ export const register: Register = (on, raw) => {
     if (arg !== '' && arg !== 'refresh') return { text: 'Usage: /ci-budget [refresh|off|on]' }
 
     const measured = arg === 'refresh' || (await read($, snapshot)) === null ? await measure($, options) : await read($, snapshot)
-    return { text: report(measured, await read($, watch), await read($, isPaused), options.blockAt) }
+    return { text: report(measured, await read($, watch), await read($, isPaused), options.blockAt, !(await hasNotify($))) }
   })
 }
 

@@ -134,3 +134,23 @@ test('without a gh login everything says how to log in', async ($, on) => {
   expect(text).toContain('no usage data')
   expect(text).toContain('gh auth login')
 })
+
+const BILLED = {
+  ...ORG_REPO,
+  'organizations/acme/settings/billing/usage': { stdout: usage(500) },
+  'organizations/acme/settings/billing/budgets': { stdout: { budgets: [] } },
+}
+
+test('the report points to notify when it is not installed', async ($, on) => {
+  engine(on, BILLED)
+  on('command.list', () => ({ value: [{ name: 'ci-budget', description: '', source: 'plugin' }] }) as never)
+  const { text = '' } = await $.command.run(command('refresh'))
+  expect(text).toContain('install the notify mod: /plugin install notify@claude-mods')
+})
+
+test('and says nothing about it when notify is installed', async ($, on) => {
+  engine(on, BILLED)
+  on('command.list', () => ({ value: [{ name: 'notify', description: '', source: 'plugin' }] }) as never)
+  const { text = '' } = await $.command.run(command('refresh'))
+  expect(text).not.toContain('notify mod')
+})
