@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mod:
+        description: 'Mod to release'
+        required: true
+        type: choice
+        # scripts/check.mjs fails when a mod is missing here
+        options:
+          - guard
+      bump:
+        description: 'Version bump (auto: from the commits)'
+        required: true
+        type: choice
+        default: auto
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release ${{ inputs.mod }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run check -- ${{ inputs.mod }}
+
+      - name: Bump version and write CHANGELOG
+        id: bump
+        run: node scripts/release.mjs "${{ inputs.mod }}" "${{ inputs.bump }}"
+
+      - name: Confirm plugin.json and marketplace.json agree
+        run: npx claude plugin tag "plugins/${{ inputs.mod }}" --dry-run --force
+
+      # The commit is made through the API rather than pushed, so GitHub signs
+      # it (Verified) like the squash merges. RELEASE_TOKEN belongs to the repo
+      # admin, the one actor the main ruleset lets past the PR requirement.
+      - name: Commit to main
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          MOD: ${{ inputs.mod }}
+          VERSION: ${{ steps.bump.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, writeFileSync } from "node:fs"
+            import { execFileSync } from "node:child_process"
+            const { MOD, VERSION, REPO } = process.env
+            const files = ["CHANGELOG.md", ".claude-plugin/marketplace.json", `plugins/${MOD}/.claude-plugin/plugin.json`]
+            const query = `mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid url } } }`
+            const input = {
+              branch: { repositoryNameWithOwner: REPO, branchName: "main" },
+              message: { headline: `chore(release): ${MOD} ${VERSION}` },
+              expectedHeadOid: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+              fileChanges: { additions: files.map(path => ({ path, contents: readFileSync(path).toString("base64") })) },
+            }
+            writeFileSync("commit.json", JSON.stringify({ query, variables: { input } }))
+          '
+          oid=$(gh api graphql --input commit.json --jq '.data.createCommitOnBranch.commit.oid')
+          echo "Committed $oid"
+          echo "oid=$oid" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.bump.outputs.tag }}
+          OID: ${{ steps.commit.outputs.oid }}
+          TITLE: ${{ inputs.mod }} ${{ steps.bump.outputs.version }}
+          NOTES: ${{ steps.bump.outputs.notes }}
+        run: gh release create "$TAG" --target "$OID" --title "$TITLE" --notes-file "$NOTES"

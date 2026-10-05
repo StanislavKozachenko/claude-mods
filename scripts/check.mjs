@@ -86,6 +86,14 @@ const checkMarketplace = () => {
   }
   for (const name of listed.keys()) problems.push(`${name}: listed in marketplace.json but plugins/${name} is missing`)
 
+  // The Release workflow's `mod` input is a choice list, which has to be static
+  const release = readFileSync(join(ROOT, '.github', 'workflows', 'release.yml'), 'utf8')
+  const choices = release.match(/\n {6}mod:\n[\s\S]*?options:\n((?: {10}- .+\n)+)/)?.[1] ?? ''
+  const releasable = new Set(choices.split('\n').map(line => line.replace(/^\s*- /, '').trim()).filter(Boolean))
+  for (const mod of allMods()) {
+    if (!releasable.has(mod)) problems.push(`${mod}: missing from the mod options in .github/workflows/release.yml`)
+  }
+
   problems.forEach(problem => console.log(`  ${problem}`))
   step('marketplace consistency', problems.length === 0)
   // --strict fails an empty marketplace, which is what it is until the first mod
