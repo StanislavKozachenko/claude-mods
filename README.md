@@ -16,6 +16,14 @@ Add the marketplace once, then install the mods you want:
 /plugin install <mod>@claude-mods
 ```
 
+The short form clones over SSH. Without a GitHub SSH key (the add fails with `Host key verification failed`), use the HTTPS URL instead:
+
+```text
+/plugin marketplace add https://github.com/StanislavKozachenko/claude-mods.git
+```
+
+`/plugin update <mod>@claude-mods` picks up a new release.
+
 ## Mods
 
 | Mod | What it does |
