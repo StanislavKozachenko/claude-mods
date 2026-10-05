@@ -1,0 +1,44 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  triage:
+    name: Triage
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read update metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+
+      # Patch and minor updates merge on their own once the required `CI ok`
+      # check is green (auto-merge waits for it). A major update, or a Claude
+      # Code update that fails CI, waits for a person.
+      - name: Label and enable auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.html_url }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          DEPENDENCIES: ${{ steps.meta.outputs.dependency-names }}
+        run: |
+          echo "Update: $DEPENDENCIES ($UPDATE_TYPE)"
+
+          if echo "$DEPENDENCIES" | grep -q '@anthropic-ai/claude-code'; then
+            gh pr edit "$PR" --add-label claude-code
+          fi
+
+          if [ "$UPDATE_TYPE" = "version-update:semver-major" ]; then
+            gh pr edit "$PR" --add-label breaking
+            gh pr comment "$PR" --body "Major update: not merged automatically. Check the release notes, then merge by hand once \`CI ok\` is green."
+            exit 0
+          fi
+
+          gh pr edit "$PR" --add-label automerge
+          gh pr merge "$PR" --auto --squash

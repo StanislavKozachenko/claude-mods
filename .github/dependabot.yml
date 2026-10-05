@@ -1,0 +1,42 @@
+version: 2
+
+updates:
+  # Claude Code ships almost daily and the mod API is early access: the pin
+  # follows releases closely. A one-day cooldown skips a release pulled soon
+  # after publishing. CI checks every mod against the new version on all three
+  # platforms; dependabot-auto-merge.yml merges patch/minor once it is green.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: '06:00'
+      timezone: Europe/Minsk
+    cooldown:
+      default-days: 1
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      claude-code:
+        patterns: ['@anthropic-ai/claude-code']
+      dev-tools:
+        patterns: ['*']
+        exclude-patterns: ['@anthropic-ai/claude-code']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Minsk
+    labels: [dependencies, github-actions]
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ['*']
