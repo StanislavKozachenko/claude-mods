@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [ci-budget 0.1.1] - 2026-10-05
+
+### Changed
+
+- point to notify for desktop budget notifications (#29)
+
+---
+
 ## [notify 0.2.0] - 2026-10-05
 
 ### Added

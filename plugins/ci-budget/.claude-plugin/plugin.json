@@ -1,6 +1,6 @@
 {
   "name": "ci-budget",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Keeps GitHub Actions spend in sight: the month's minutes and cost for the repo's organisation or account, GitHub budgets, cache and artifacts, risky workflows as they are written, and runs that hang",
   "author": {
     "name": "Stanislav Kozachenko",
