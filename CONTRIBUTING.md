@@ -51,13 +51,21 @@ plugins/<name>/
   README.md
 ```
 
-- Add the mod to `.claude-plugin/marketplace.json` with the same name and version
+- Start at version `0.0.0`; the first release makes it `0.1.0`
+- Add the mod to `.claude-plugin/marketplace.json` with the same name and version, and to the `mod` options in `.github/workflows/release.yml` (`npm run check` fails until both are there)
+- Mods run on Linux, Windows and macOS, whose builds have different built-in tools (Linux has no `Grep`): match a tool that is not on every build by name, not by its types. CI checks each mod on all three
 - Load it from disk with `npx claude --plugin-dir plugins/<name>`; saving a file reloads it. Loading writes the API's types for that Claude Code build to `plugins/<name>/.claude-plugin/types/` (git-ignored), which your editor and `tsc` read
 - `npm run check -- <name>` runs `claude plugin validate --strict`, `tsc` and `claude plugin test` for that mod; without a name it checks every mod
 - The `.d.ts` Claude Code writes is the API reference; inside Claude Code, the `plugin-authoring` skill explains it
 
 ## Releases
 
-Each mod is versioned on its own. The maintainer runs the **Release** workflow (Actions → Release → Run workflow) and picks the mod and a bump (`auto` derives it from the mod's commits). The workflow bumps the version in `plugin.json` and `marketplace.json`, adds a `CHANGELOG.md` entry from the mod's commits, commits that to `main`, tags `<mod>--v<version>` and publishes a GitHub release.
+Each mod is versioned on its own. The maintainer runs the **Release** workflow (Actions → Release → Run workflow, or `gh workflow run Release -f mod=<mod> -f bump=auto`) and picks the mod and a bump. `auto` derives it from the mod's commits since its last tag: a breaking change → major (minor while 0.x), `feat` → minor, otherwise patch. `node scripts/release.mjs <mod> --dry-run` previews it locally.
 
-The release commit is the only commit that lands on `main` without a PR.
+The workflow checks the mod, bumps the version in `plugin.json` and `marketplace.json`, adds a `CHANGELOG.md` entry from the mod's commits, commits that to `main` through the GitHub API (so the commit is signed and Verified), and publishes a `<mod>--v<version>` GitHub release on it. Installed copies pick the new version up with `/plugin update`.
+
+The release commit is the only commit that lands on `main` without a PR. It needs a `RELEASE_TOKEN` secret: a token of the repo admin with contents write access, the one actor the `main` ruleset lets past the PR requirement.
+
+## Dependencies
+
+Dependabot keeps the pinned Claude Code version, the dev tools and the GitHub Actions current. Patch and minor updates merge on their own once `CI ok` is green, which for a Claude Code update means every mod passed on all three platforms against the new build. Major updates are labelled `breaking` and wait for a maintainer.
