@@ -20,6 +20,7 @@ Add the marketplace once, then install the mods you want:
 
 | Mod | What it does |
 | --- | --- |
+| [context-bar](plugins/context-bar) | Shows the context window as a stacked bar above the prompt, one colour per `/context` category; `/context-bar` toggles it |
 | [guard](plugins/guard) | Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command |
 
 ## Develop

@@ -9,6 +9,7 @@ on:
         type: choice
         # scripts/check.mjs fails when a mod is missing here
         options:
+          - context-bar
           - guard
       bump:
         description: 'Version bump (auto: from the commits)'
