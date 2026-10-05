@@ -63,6 +63,16 @@ Pick the **Actions** product, set the amount (`$0` allows the included minutes o
 
 Run `/ci-budget refresh` after changing access.
 
+## Desktop notifications
+
+ci-budget warns inside the session: a toast and the status line. For a **desktop notification** when the budget runs low (useful while you are in another window), also install [notify](../notify):
+
+```text
+/plugin install notify@claude-mods
+```
+
+notify watches ci-budget's measurement and notifies once per owner and month when usage reaches its `budgetPercent` (80% by default), and once more at 100%. Its `budget` option turns that off. Neither mod needs the other: without notify ci-budget works as above, and `/ci-budget` reminds you that notify exists. Like the toasts, it needs exact billing numbers (see Setup).
+
 ## The workflow check
 
 Flags, with how to fix each:
