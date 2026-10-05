@@ -10,7 +10,12 @@
   "plugins": [
     {
       "name": "ci-budget",
-      "source": "./plugins/ci-budget",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/ci-budget",
+        "ref": "ci-budget--v0.1.1"
+      },
       "version": "0.1.1",
       "description": "Keeps GitHub Actions spend in sight: the month's minutes and cost for the repo's organisation or account, GitHub budgets, cache and artifacts, risky workflows as they are written, and runs that hang",
       "category": "devops",
@@ -24,7 +29,12 @@
     },
     {
       "name": "context-bar",
-      "source": "./plugins/context-bar",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/context-bar",
+        "ref": "context-bar--v0.1.0"
+      },
       "version": "0.1.0",
       "description": "Shows the context window as a stacked bar above the prompt, one colour per /context category; /context-bar toggles it",
       "category": "productivity",
@@ -37,7 +47,12 @@
     },
     {
       "name": "guard",
-      "source": "./plugins/guard",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/guard",
+        "ref": "guard--v0.1.0"
+      },
       "version": "0.1.0",
       "description": "Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command",
       "category": "security",
@@ -50,7 +65,12 @@
     },
     {
       "name": "notify",
-      "source": "./plugins/notify",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/notify",
+        "ref": "notify--v0.3.0"
+      },
       "version": "0.3.0",
       "description": "Notifications that say what happened: a long turn finished (with its answer), a permission prompt or a question waiting, an Actions budget running low; on the desktop and, through Claude Code push, on your phone",
       "category": "productivity",
@@ -63,7 +83,12 @@
     },
     {
       "name": "redact",
-      "source": "./plugins/redact",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/redact",
+        "ref": "redact--v0.1.0"
+      },
       "version": "0.1.0",
       "description": "Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends",
       "category": "security",
@@ -76,7 +101,12 @@
     },
     {
       "name": "turn-stats",
-      "source": "./plugins/turn-stats",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/turn-stats",
+        "ref": "turn-stats--v0.1.0"
+      },
       "version": "0.1.0",
       "description": "Adds what a turn did to its 'Worked for' line: tool calls by tool, failures, files changed and cost",
       "category": "productivity",

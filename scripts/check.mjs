@@ -11,6 +11,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
+import { marketSource } from './market-source.mjs'
+
 const ROOT = resolve(import.meta.dirname, '..')
 const PLUGINS = join(ROOT, 'plugins')
 const BIN = join(ROOT, 'node_modules', '.bin')
@@ -78,7 +80,10 @@ const checkMarketplace = () => {
       problems.push(`plugins/${mod}: not listed in marketplace.json`)
       continue
     }
-    if (entry.source !== `./plugins/${mod}`) problems.push(`${mod}: source should be "./plugins/${mod}"`)
+    const expected = marketSource(mod, manifest.version)
+    if (JSON.stringify(entry.source) !== JSON.stringify(expected)) {
+      problems.push(`${mod}: source should be ${JSON.stringify(expected)} for version ${manifest.version}`)
+    }
     if (entry.version !== manifest.version) {
       problems.push(`${mod}: marketplace version ${entry.version} != plugin.json ${manifest.version}`)
     }
