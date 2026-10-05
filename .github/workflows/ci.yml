@@ -65,15 +65,18 @@ jobs:
       - run: npm ci
       - run: npm run check -- --market-only
 
+  # Each platform's build has its own set of built-in tools (Linux has no Grep),
+  # so a mod is type-checked and tested on every platform it runs on.
   mods:
-    name: Mod (${{ matrix.mod }})
+    name: Mod (${{ matrix.mod }}, ${{ matrix.os }})
     needs: changes
     if: needs.changes.outputs.mods != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         mod: ${{ fromJson(needs.changes.outputs.mods) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
