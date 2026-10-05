@@ -115,3 +115,17 @@ export const budgetToast = (cwd: string, snapshot: BudgetSnapshot): Toast => {
     body: `Actions budget: ${String(snapshot.owner)} has used ${String(snapshot.percent)}% of its included minutes this month${minutes}`,
   }
 }
+
+/** The push text: title and body in one line, under the 200 characters a phone shows. */
+export function pushMessage(toast: Toast, max = 200): string {
+  const text = `${toast.title}: ${toast.body}`
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
+}
+
+/** Why Claude Code sent no push, said so the person knows what, if anything, to do. */
+export function pushReason(reason: string | undefined): string {
+  if (reason === 'user_present') return 'you are at this terminal, so Claude Code holds it; it reaches your phone when you are away.'
+  if (reason === 'config_off') return 'push is off in Claude Code: turn on "Push when Claude decides" in /config (agentPushNotifEnabled).'
+  if (reason === 'no_transport') return 'no phone is connected: start Remote Control and sign in to the Claude app with the same account.'
+  return `Claude Code did not send it${reason ? ` (${reason})` : ''}.`
+}
