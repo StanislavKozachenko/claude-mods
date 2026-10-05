@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed mods
+    runs-on: ubuntu-latest
+    outputs:
+      mods: ${{ steps.detect.outputs.mods }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A PR checks the mods it touches. Shared files (the pinned Claude Code
+      # version, the check script, this workflow) can break any mod, so a change
+      # to them checks every mod, as does a push to main.
+      - name: Detect
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          all=$(find plugins -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort || true)
+
+          if [ "$EVENT" != "pull_request" ]; then
+            mods="$all"
+          else
+            files=$(git diff --name-only "$BASE"...HEAD)
+            echo "Changed files:"; echo "$files" | sed 's/^/  /'
+
+            if echo "$files" | grep -qE '^(package(-lock)?\.json|scripts/|\.github/workflows/ci\.yml|tsconfig)'; then
+              mods="$all"
+            else
+              mods=$(echo "$files" | sed -nE 's#^plugins/([^/]+)/.*#\1#p' | sort -u \
+                | while read -r m; do [ -d "plugins/$m" ] && echo "$m"; done || true)
+            fi
+          fi
+
+          json=$(printf '%s\n' $mods | jq -R . | jq -sc 'map(select(length > 0))')
+          echo "Mods to check: $json"
+          echo "mods=$json" >> "$GITHUB_OUTPUT"
+
+  marketplace:
+    name: Marketplace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run check -- --market-only
+
+  mods:
+    name: Mod (${{ matrix.mod }})
+    needs: changes
+    if: needs.changes.outputs.mods != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mod: ${{ fromJson(needs.changes.outputs.mods) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run check -- --no-market ${{ matrix.mod }}
+
+  pr-title:
+    name: PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # The squash commit takes the PR title, and the release workflow builds
+      # the CHANGELOG from those commits.
+      - name: Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|perf|refactor|docs|ci|chore|test|build|revert)(\([a-z0-9-]+\))?!?: [^ ].*$'
+          if ! printf '%s' "$TITLE" | grep -qE "$pattern"; then
+            echo "::error::PR title must be a Conventional Commits line, e.g. 'feat(guard): block force pushes'. Got: $TITLE"
+            exit 1
+          fi
+          if [ ${#TITLE} -gt 100 ]; then
+            echo "::error::PR title is ${#TITLE} characters; keep it under 100."
+            exit 1
+          fi
+          echo "OK: $TITLE"
+
+  ci-ok:
+    name: CI ok
+    if: always()
+    needs: [changes, marketplace, mods, pr-title]
+    runs-on: ubuntu-latest
+    steps:
+      # The one check the main ruleset requires: green when every job passed or
+      # was skipped on purpose (no changed mods, not a PR).
+      - name: Summarize
+        env:
+          RESULTS: ${{ toJson(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -qE '"(failure|cancelled)"'; then
+            echo "::error::A required job failed or was cancelled."
+            exit 1
+          fi

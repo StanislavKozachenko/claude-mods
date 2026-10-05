@@ -1,0 +1,22 @@
+{
+  "name": "claude-mods",
+  "private": true,
+  "description": "A collection of Claude Code mods, shipped as plugins",
+  "license": "MIT",
+  "author": "Stanislav Kozachenko",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StanislavKozachenko/claude-mods.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "2.1.289",
+    "typescript": "7.0.2"
+  }
+}
