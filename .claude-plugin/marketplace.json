@@ -33,6 +33,20 @@
         "ui",
         "status"
       ]
+    },
+    {
+      "name": "turn-stats",
+      "source": "./plugins/turn-stats",
+      "version": "0.0.0",
+      "description": "Adds what a turn did to its 'Worked for' line: tool calls by tool, failures, files changed and cost",
+      "category": "productivity",
+      "keywords": [
+        "turn",
+        "stats",
+        "cost",
+        "tools",
+        "ui"
+      ]
     }
   ]
 }
