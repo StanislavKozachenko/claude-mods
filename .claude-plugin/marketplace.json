@@ -11,7 +11,7 @@
     {
       "name": "guard",
       "source": "./plugins/guard",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "description": "Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command",
       "category": "security",
       "keywords": [
