@@ -1,0 +1,29 @@
+{
+  "name": "log-trim",
+  "version": "0.0.0",
+  "description": "Condenses noisy command output (installs, builds, tests, containers, CI logs) before the model reads it: progress bars and repeats out, every error kept, the full log one read away",
+  "author": {
+    "name": "Stanislav Kozachenko",
+    "url": "https://github.com/StanislavKozachenko"
+  },
+  "homepage": "https://github.com/StanislavKozachenko/claude-mods/tree/main/plugins/log-trim",
+  "repository": "https://github.com/StanislavKozachenko/claude-mods",
+  "license": "MIT",
+  "keywords": ["logs", "context", "tokens", "build", "tests"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "maxLines": {
+      "type": "number",
+      "title": "Longest output kept whole (lines)",
+      "description": "After cleaning, a longer output keeps its head, every error and warning with its stack, and its tail",
+      "default": 150
+    },
+    "commands": {
+      "type": "string",
+      "multiple": true,
+      "title": "More noisy commands",
+      "description": "Extra regular expressions matched against the command, beyond the built-in installs, builds, tests and containers",
+      "default": []
+    }
+  }
+}

@@ -64,6 +64,20 @@
       ]
     },
     {
+      "name": "log-trim",
+      "source": "./plugins/log-trim",
+      "version": "0.0.0",
+      "description": "Condenses noisy command output (installs, builds, tests, containers, CI logs) before the model reads it: progress bars and repeats out, every error kept, the full log one read away",
+      "category": "productivity",
+      "keywords": [
+        "logs",
+        "context",
+        "tokens",
+        "build",
+        "tests"
+      ]
+    },
+    {
       "name": "notify",
       "source": {
         "source": "git-subdir",

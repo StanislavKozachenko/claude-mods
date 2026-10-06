@@ -42,6 +42,7 @@ An update arrives with a release, when the mod's version changes, not with every
 | [ci-budget](plugins/ci-budget) | Keeps GitHub Actions spend in sight: this month's minutes and cost for the repo's organisation or account, GitHub budgets, risky workflows as they are written, and runs that hang |
 | [context-bar](plugins/context-bar) | Shows the context window as a stacked bar above the prompt, one colour per `/context` category; `/context-bar` toggles it |
 | [guard](plugins/guard) | Blocks destructive shell commands and access to secret files before they run, anywhere in a compound command |
+| [log-trim](plugins/log-trim) | Condenses noisy command output (installs, builds, tests, containers, CI logs) before the model reads it: progress and repeats out, every error kept, the full log one read away |
 | [notify](plugins/notify) | Notifications that say what happened: a long turn finished, a permission prompt or a question waiting, an Actions budget running low; on the desktop and, through Claude Code push, on your phone |
 | [redact](plugins/redact) | Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends |
 | [turn-stats](plugins/turn-stats) | Adds what a turn did to its 'Worked for' line: tool calls by tool, failures, files changed and cost |

@@ -12,6 +12,7 @@ on:
           - ci-budget
           - context-bar
           - guard
+          - log-trim
           - notify
           - redact
           - turn-stats
