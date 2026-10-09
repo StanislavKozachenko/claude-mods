@@ -6,13 +6,13 @@ const SECRET = 'ghp_FAKEfake0123456789abcdefghijABCDEFGHIJ'
 
 // The kit has no store beneath session.append, so the test's own hook stands
 // for it and records the row as it reached the bottom: what would be stored
-// and sent. Its answer is refused (a hook must relay the row), which rejects
-// the call after the row was seen.
+// and sent. It relays the row on, as a hook must, and the bottom hook beneath
+// it throws, which rejects the call after the row was seen.
 const engine = (on: On) => {
   const stored: { door: string; content: unknown }[] = []
-  on('session.append', (_$, e) => {
+  on('session.append', (_$, e, next) => {
     stored.push({ door: e.door, content: e.message.content })
-    return { message: e.message, uuid: e.uuid } as never
+    return next(e)
   })
 
   return stored
