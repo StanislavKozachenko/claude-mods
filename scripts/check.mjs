@@ -48,7 +48,7 @@ const run = (bin, argv, options = {}) => {
     cwd: ROOT,
     stdio: options.isQuiet ? 'pipe' : 'inherit',
     shell: isWindows,
-    env: ENV,
+    env: { ...ENV, ...options.env },
     timeout: options.timeoutMs,
   })
 
@@ -109,9 +109,15 @@ const checkMarketplace = () => {
 // Loading a mod makes Claude Code write the API's types for its build into
 // <mod>/.claude-plugin/types. The load happens even though the run is not
 // logged in; the run then stops with "Not logged in", which is expected.
+// Since 2.1.296 the types are laid only for a watched --plugin-dir, and a
+// -p run does not watch unless CLAUDE_CODE_PLUGIN_DIR_WATCH turns it on.
 const writeTypes = dir => {
   rmSync(join(dir, '.claude-plugin', 'types'), { recursive: true, force: true })
-  run('claude', ['-p', '--plugin-dir', dir, 'types'], { isQuiet: true, timeoutMs: 60_000 })
+  run('claude', ['-p', '--plugin-dir', dir, 'types'], {
+    isQuiet: true,
+    timeoutMs: 60_000,
+    env: { CLAUDE_CODE_PLUGIN_DIR_WATCH: '1' },
+  })
 
   return existsSync(join(dir, '.claude-plugin', 'types', 'claude-code', 'index.d.ts'))
 }
