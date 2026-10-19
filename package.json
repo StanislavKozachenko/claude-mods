@@ -16,7 +16,7 @@
     "check": "node scripts/check.mjs"
   },
   "devDependencies": {
-    "@anthropic-ai/claude-code": "2.1.300",
+    "@anthropic-ai/claude-code": "2.1.302",
     "typescript": "7.0.2"
   }
 }
