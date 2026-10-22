@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [context-bar 0.2.0] - 2026-10-22
+
+### Added
+
+- show the tokens left before auto-compaction (#58)
+
+---
+
 ## [ci-budget 0.2.0] - 2026-10-22
 
 ### Added
