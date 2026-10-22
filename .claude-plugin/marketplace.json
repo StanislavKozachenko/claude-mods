@@ -87,9 +87,9 @@
         "source": "git-subdir",
         "url": "https://github.com/StanislavKozachenko/claude-mods.git",
         "path": "plugins/redact",
-        "ref": "redact--v0.1.0"
+        "ref": "redact--v0.2.0"
       },
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends",
       "category": "security",
       "keywords": [
