@@ -33,6 +33,13 @@ export const FORMAT_RULES: Rule[] = [
   { kind: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
   { kind: 'url-password', pattern: /(?<pre>\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)(?<secret>[^\s@/]+)(?<post>@)/gi },
   { kind: 'auth-header', pattern: /(?<pre>\bAuthorization["']?\s*[:=]\s*["']?(?:Bearer|Basic|Token)\s+)(?<secret>[A-Za-z0-9._~+/=-]{12,})/gi },
+  { kind: 'huggingface-token', pattern: /\bhf_[A-Za-z0-9]{30,}\b/g },
+  { kind: 'digitalocean-token', pattern: /\bdo[opr]_v1_[a-f0-9]{64}\b/g },
+  { kind: 'sendgrid-key', pattern: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/g },
+  { kind: 'azure-storage-key', pattern: /(?<pre>\bAccountKey=)(?<secret>[A-Za-z0-9+/]{86}==)/g },
+  // A SAS URL's signature: `…?sv=2022-11-02&ss=b&…&sig=abc%2Fdef%3D`
+  { kind: 'azure-sas', pattern: /(?<pre>[?&]sig=)(?<secret>[A-Za-z0-9%+/=]{40,})/g },
+  { kind: 'telegram-bot-token', pattern: /\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b/g },
 ]
 
 /** Values under a secret-looking name: catch what has no known format. */
