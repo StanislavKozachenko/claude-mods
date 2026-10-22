@@ -223,7 +223,7 @@ const deny = (rule: string, words: string[], reason: string, hint: string): Verd
   hint,
 })
 
-function checkDestructive(words: string[], rmMode: RmMode): Verdict | undefined {
+export function checkDestructive(words: string[], rmMode: RmMode): Verdict | undefined {
   const [program = '', ...args] = words
   const name = basename(program)
 
