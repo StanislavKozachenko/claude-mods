@@ -14,9 +14,9 @@
         "source": "git-subdir",
         "url": "https://github.com/StanislavKozachenko/claude-mods.git",
         "path": "plugins/ci-budget",
-        "ref": "ci-budget--v0.1.1"
+        "ref": "ci-budget--v0.2.0"
       },
-      "version": "0.1.1",
+      "version": "0.2.0",
       "description": "Keeps GitHub Actions spend in sight: the month's minutes and cost for the repo's organisation or account, GitHub budgets, cache and artifacts, risky workflows as they are written, and runs that hang",
       "category": "devops",
       "keywords": [
