@@ -8,7 +8,7 @@ type Answer = { stdout?: unknown; stderr?: string; exitCode?: number }
 const engine = (on: On, routes: Record<string, Answer>) => {
   const asked: string[] = []
   const store = new Map<string, unknown>()
-  mock.clock(on, { now: Date.parse('2026-10-05T12:00:00Z') })
+  const clock = mock.clock(on, { now: Date.parse('2026-10-05T12:00:00Z') })
   on('store.get', (_$, e) => ({ value: store.get(e.key) }))
   on('store.set', (_$, e) => {
     store.set(e.key, e.value)
@@ -25,9 +25,13 @@ const engine = (on: On, routes: Record<string, Answer>) => {
     return { value: { exitCode: route.exitCode ?? 0, stdout, stderr: route.stderr ?? '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('tool.call', () => ({ result: { stdout: '', stderr: '', interrupted: false } }) as never)
-  on('ui.status', () => ({ value: undefined }) as never)
+  const statuses: (string | undefined)[] = []
+  on('ui.status', (_$, e) => {
+    statuses.push(e.text)
+    return { value: undefined } as never
+  })
 
-  return { asked }
+  return { asked, statuses, clock }
 }
 
 const ORG_REPO = {
@@ -153,4 +157,47 @@ test('and says nothing about it when notify is installed', async ($, on) => {
   on('command.list', () => ({ value: [{ name: 'notify', description: '', source: 'plugin' }] }) as never)
   const { text = '' } = await $.command.run(command('refresh'))
   expect(text).not.toContain('notify mod')
+})
+
+test('the status line stays quiet below statusFrom', async ($, on) => {
+  const { statuses } = engine(on, { ...BILLED, 'organizations/acme/settings/billing/usage': { stdout: usage(400) } })
+  await $.command.run(command('refresh'))
+  expect(statuses.at(-1)).toBeUndefined()
+})
+
+test('and shows the share from it', async ($, on) => {
+  const { statuses } = engine(on, { ...BILLED, 'organizations/acme/settings/billing/usage': { stdout: usage(1_200) } })
+  await $.command.run(command('refresh'))
+  expect(statuses.at(-1)).toBe('Actions 60% · acme')
+})
+
+test('statusFrom: 0 always shows it', { options: { statusFrom: 0 } }, async ($, on) => {
+  const { statuses } = engine(on, { ...BILLED, 'organizations/acme/settings/billing/usage': { stdout: usage(40) } })
+  await $.command.run(command('refresh'))
+  expect(statuses.at(-1)).toBe('Actions 2% · acme')
+})
+
+test('an estimate stays out of the status line', async ($, on) => {
+  const { statuses } = engine(on, {
+    ...ORG_REPO,
+    'organizations/acme/settings/billing/usage': { exitCode: 1, stderr: 'gh: Not Found (HTTP 404)' },
+    'repos/acme/backend/actions/runs?': { stdout: { workflow_runs: [] } },
+  })
+  await $.command.run(command('refresh'))
+  expect(statuses.at(-1)).toBeUndefined()
+})
+
+test('watched runs show below statusFrom', async ($, on) => {
+  const { statuses, clock } = engine(on, {
+    ...BILLED,
+    'organizations/acme/settings/billing/usage': { stdout: usage(100) },
+    'repos/acme/backend/actions/runs?': {
+      stdout: { workflow_runs: [{ id: 9, name: 'CI', status: 'in_progress', conclusion: null, html_url: '' }] },
+    },
+    'repos/acme/backend/actions/runs/9/jobs': { stdout: { jobs: [] } },
+  })
+  await $.command.run(command('refresh'))
+  await $.tool.call({ tool: 'Bash', command: 'git push' })
+  await clock.advance(15_000)
+  expect(statuses.at(-1)).toBe('CI 1 running')
 })
