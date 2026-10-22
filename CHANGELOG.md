@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [guard 0.2.0] - 2026-10-22
+
+### Added
+
+- inspect PowerShell commands (#54)
+
+---
+
 ## [notify 0.3.0] - 2026-10-05
 
 ### Added
