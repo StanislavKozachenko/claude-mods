@@ -27,6 +27,18 @@ Settings `permissions.deny` rules match command prefixes, so `cd app && rm -rf ~
 
 They are blocked for `Read`, `Edit`, `Write`, `NotebookEdit` and `Grep`, on the path as given and on where it resolves (a symlink to `.env` is `.env`), and in shell commands that read, send or write them: `cat .env`, `grep KEY .env`, `curl -d @.env`, `echo X >> .env`, `cp .env /tmp`, `git add .env`. Commands that only name them pass: `cp .env.example .env`, `echo .env >> .gitignore`, `source .env`.
 
+**PowerShell** (the `PowerShell` tool of Claude Code on Windows) gets the same rules and options, read in PowerShell's own syntax: cmdlets and their aliases, case-insensitive parameters that may be abbreviated (`-rec`, `-fo`), and `-Name:value`.
+
+| Rule | Blocks | Lets through |
+| --- | --- | --- |
+| `rm-rf` | `Remove-Item -Recurse` (and `rm`, `del`, `rd`, `ri`, `cmd /c rd /s`) on `C:\`, `C:\Users\me`, `$env:USERPROFILE`, `$HOME`, `.`, `..`, a bare `$dir\`. PowerShell's `-Recurse` deletes without asking even without `-Force`, so `-Force` is not required for the block | `Remove-Item -Recurse -Force .\node_modules`, `rm -r dist` |
+| `pipe-to-shell` | `iwr … \| iex`, `irm … \| Invoke-Expression`, `iex (New-Object Net.WebClient).DownloadString(…)` | `iwr … -OutFile install.ps1` |
+| `disk-write` | `Format-Volume`, `Clear-Disk`, `Initialize-Disk`, `Remove-Partition`, `diskpart`, `format D:` | `Get-Volume` |
+| `chmod-777` | `icacls … /grant Everyone:F /T` | `icacls … /grant me:R` |
+| git rules | as for Bash | |
+
+Secret files are blocked in `Get-Content`/`gc`/`type`, `Select-String`, `Copy-Item`/`Move-Item` sources, `Set-Content`/`Add-Content`/`Out-File` paths, redirections (`> .env`) and `Invoke-WebRequest -InFile`; `Copy-Item .env.example .env` and `Add-Content .gitignore ".env"` pass.
+
 The model gets the rule and what to do instead, e.g.:
 
 ```text
@@ -55,4 +67,4 @@ Set them in `/config` or under `pluginConfigs.guard.options` in settings:
 
 ## Limits
 
-guard is a safety net against accidents, not a sandbox. The command check is a heuristic, not a shell parser: `eval`, scripts the model writes and then runs, interpreters (`python -c`, `node -e`) and the `PowerShell` tool are not inspected. Use Claude Code's sandbox and permission modes for containment.
+guard is a safety net against accidents, not a sandbox. The command check is a heuristic, not a shell parser: `eval`, scripts the model writes and then runs, interpreters (`python -c`, `node -e`), PowerShell script blocks and `Start-Process` are not inspected. Use Claude Code's sandbox and permission modes for containment.

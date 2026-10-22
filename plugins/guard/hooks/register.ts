@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { GuardBlock } from '../types'
 import { buildPolicy, checkCommand, checkPath, denyMessage, describePolicy } from './rules'
 import type { Policy, Verdict } from './rules'
+import { checkPowerShell } from './powershell'
 
 const isPaused = atom({ plugin: 'guard', key: 'isPaused' } as const, false)
 const blocks = atom({ plugin: 'guard', key: 'blocks' } as const, [])
@@ -90,14 +91,23 @@ export const register: Register = (on, options) => {
     return verdict ? deny($, e.tool, verdict) : next(e)
   })
 
-  // Grep is a built-in tool on some builds only (others search through Bash),
-  // so it is matched by name rather than by this build's tool types.
+  // Tools only some builds have, so matched by name rather than by this
+  // build's tool types: Grep (others search through Bash), and PowerShell
+  // (Windows builds), checked in its own syntax with the same rules as Bash.
   on('tool.call', async ($, e, next) => {
-    if (String(e.tool) !== 'Grep' || (await read($, isPaused))) return next(e)
-    const { path } = e as { path?: unknown }
-    const verdict = typeof path === 'string' ? await checkFile($, path, policy) : undefined
+    const tool = String(e.tool)
+    if ((tool !== 'Grep' && tool !== 'PowerShell') || (await read($, isPaused))) return next(e)
+    const { path, command } = e as { path?: unknown; command?: unknown }
+    const verdict =
+      tool === 'Grep'
+        ? typeof path === 'string'
+          ? await checkFile($, path, policy)
+          : undefined
+        : typeof command === 'string'
+          ? checkPowerShell(command, policy)
+          : undefined
 
-    return verdict ? deny($, e.tool, verdict) : next(e)
+    return verdict ? deny($, tool, verdict) : next(e)
   })
 
   on('command.run', { command: 'guard' }, async ($, e) => {

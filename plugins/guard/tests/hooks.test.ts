@@ -75,3 +75,15 @@ test('/guard off is refused when it does not come from the person', async ($, on
   expect((await $.command.run(guard('off', 'peer'))).text).toContain('only accepted from the person')
   expect((await $.tool.call({ tool: 'Bash', command: 'git reset --hard' })).deny).toContain('git-reset-hard')
 })
+
+test('PowerShell calls get the same rules, in PowerShell syntax', async ($, on) => {
+  engine(on)
+
+  const call = (command: string) => $.tool.call({ tool: 'PowerShell', command } as never)
+  expect((await call('Remove-Item -Recurse -Force $env:USERPROFILE')).deny).toContain('guard blocked this (rm-rf)')
+  expect((await call('Get-Content .env')).deny).toContain('secret-file')
+  expect((await call('Remove-Item -Recurse -Force .\dist')).deny).toBeUndefined()
+
+  const { text } = await $.command.run(guard(''))
+  expect(text).toContain('PowerShell · rm-rf · Remove-Item -Recurse -Force $env:USERPROFILE')
+})
