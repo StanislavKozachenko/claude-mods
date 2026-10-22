@@ -12,7 +12,7 @@ Keeps GitHub Actions spend in sight while Claude writes workflows and pushes, so
 /plugin install ci-budget@claude-mods
 ```
 
-The status line reads `Actions 62% · acme`, `Actions ~140 min (estimate) · acme/app` or adds `CI 2 running` / `CI ✓` / `CI ✗ 1 failed` while runs are watched. `/ci-budget` prints the full report, including what to set up for exact numbers.
+The status line stays quiet until it matters: it shows `Actions 62% · acme` from `statusFrom` (50%) of the included minutes, and `CI 2 running` / `CI ✓` / `CI ✗ 1 failed` while runs are watched, whatever the share. `/ci-budget` prints the full report at any time, estimates included, with what to set up for exact numbers.
 
 ## What you need
 
@@ -91,6 +91,7 @@ The check reads the YAML text (a mod has no YAML parser), so it can miss an unus
 
 | Option | Default | |
 | --- | --- | --- |
+| `statusFrom` | `50` | Show the Actions share in the status line from this percentage; `0` always shows it |
 | `warnAt` | `80` | Toast when usage crosses each of these percentages of the included minutes |
 | `blockAt` | `100` | Deny `gh workflow run` from this percentage (billing data only); `0` never blocks |
 | `includedMinutes` | `0` | Included minutes per month; `0` takes them from the plan (Free 2 000, Pro and Team 3 000, Enterprise 50 000) |

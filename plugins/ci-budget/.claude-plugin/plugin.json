@@ -19,6 +19,12 @@
       "description": "A toast when the owner's usage crosses each of these percentages",
       "default": ["80"]
     },
+    "statusFrom": {
+      "type": "number",
+      "title": "Status line from (%)",
+      "description": "Show the Actions share in the status line from this percentage of the included minutes; 0 always shows it. Watched runs show either way",
+      "default": 50
+    },
     "blockAt": {
       "type": "number",
       "title": "Block gh workflow run at (%)",

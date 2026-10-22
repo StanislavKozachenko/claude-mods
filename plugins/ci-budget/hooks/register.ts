@@ -43,6 +43,8 @@ type Gh = { ok: true; data: unknown } | { ok: false; stderr: string }
 type RunCache = Record<string, { minutes: Record<string, number>; quotaMinutes: number }>
 
 let warnedAt = 0
+/** The share of the included minutes from which the status line shows it. */
+let statusFrom = 50
 let stopWatch: (() => void) | undefined
 
 /** `gh api <path>` as the person is logged in. */
@@ -233,9 +235,10 @@ async function showStatus($: EngineInterface) {
   const watching = await read($, watch)
   const parts: string[] = []
 
-  if (measured?.source === 'billing' && measured.percent !== undefined) parts.push(`Actions ${measured.percent}% · ${measured.owner}`)
-  else if (measured?.source === 'billing') parts.push(`Actions ${formatMinutes(measured.quotaMinutes)} min · ${measured.owner}`)
-  else if (measured?.source === 'estimate') parts.push(`Actions ~${formatMinutes(measured.quotaMinutes)} min (estimate) · ${measured.repo}`)
+  // A low share is noise in every session: below statusFrom it stays in /ci-budget
+  if (measured?.source === 'billing' && measured.percent !== undefined && measured.percent >= statusFrom) {
+    parts.push(`Actions ${measured.percent}% · ${measured.owner}`)
+  }
   if (await read($, isPaused)) parts.push('block paused')
   if (watching && watching.runs.length > 0) parts.push(`CI ${watchSummary(watching)}`)
 
@@ -370,6 +373,7 @@ export const register: Register = (on, raw) => {
     isLintOn: raw.lint !== false,
     isWatchOn: raw.watch !== false,
   }
+  statusFrom = Math.max(0, Number(raw.statusFrom ?? 50))
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
