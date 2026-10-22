@@ -26,6 +26,41 @@ describe('known formats', () => {
     for (const [input, output] of cases) expect(clean(input)).toBe(output)
   })
 
+  test('more services: Hugging Face, DigitalOcean, SendGrid, Azure, Telegram', async () => {
+    const azureKey = `${'Ab3+'.repeat(21)}Ab==`
+    const cases: [string, string][] = [
+      [`HF_TOKEN set: hf_${'aB3d'.repeat(9)}`, 'HF_TOKEN set: [redacted:huggingface-token]'],
+      [`token dop_v1_${'a1'.repeat(32)}`, 'token [redacted:digitalocean-token]'],
+      [`refresh dor_v1_${'f0'.repeat(32)}`, 'refresh [redacted:digitalocean-token]'],
+      [`SG.${'A1b2_c3D4e'.repeat(2)}xy.${'Q9w8E7r6T5'.repeat(4)}abc`, '[redacted:sendgrid-key]'],
+      [
+        `DefaultEndpointsProtocol=https;AccountName=app;AccountKey=${azureKey};EndpointSuffix=core.windows.net`,
+        'DefaultEndpointsProtocol=https;AccountName=app;AccountKey=[redacted:azure-storage-key];EndpointSuffix=core.windows.net',
+      ],
+      [
+        'https://app.blob.core.windows.net/c/f.zip?sv=2022-11-02&ss=b&se=2026-12-01&sig=Q1w2E3r4T5y6U7i8O9p0A1s2D3f4G5h6J7k8L9z0x%3D',
+        'https://app.blob.core.windows.net/c/f.zip?sv=2022-11-02&ss=b&se=2026-12-01&sig=[redacted:azure-sas]',
+      ],
+      [`bot 123456789:AA${'Hd8Kq2'.repeat(5)}xyz`, 'bot [redacted:telegram-bot-token]'],
+    ]
+    for (const [input, output] of cases) expect(clean(input)).toBe(output)
+  })
+
+  test('their look-alikes stay', async () => {
+    for (const text of [
+      'see https://huggingface.co/hf_hub_download',
+      'hf_transfer enabled',
+      `sha256: ${'a1'.repeat(32)}`,
+      'SG.config.load',
+      'AccountKey=<your-key>',
+      'https://example.com/?sig=short',
+      'time 12:34:56, port 8080:80',
+      'issue 123456789:fixed in v2',
+    ]) {
+      expect(clean(text)).toBe(text)
+    }
+  })
+
   test('a private key block goes whole', async () => {
     const pem = '-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\nAAAA\n-----END OPENSSH PRIVATE KEY-----'
     expect(clean(`before\n${pem}\nafter`)).toBe('before\n[redacted:private-key]\nafter')

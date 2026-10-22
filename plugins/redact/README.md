@@ -18,7 +18,9 @@ That block is what the model answered in a live run after `cat creds.txt` on a f
 
 ## What it hides
 
-**Known formats**, wherever they appear: private key blocks, AWS access and secret keys, GitHub and GitLab tokens, Anthropic, OpenAI, Slack, Stripe, Google, npm and PyPI keys, JWTs, the password in a connection string, and `Authorization: Bearer|Basic|Token` values.
+**Known formats**, wherever they appear: private key blocks, AWS access and secret keys, GitHub and GitLab tokens, Anthropic, OpenAI, Slack, Stripe, Google, npm, PyPI, Hugging Face, DigitalOcean and SendGrid keys, Azure Storage account keys and SAS signatures (`sig=` in a URL), Telegram bot tokens, JWTs, the password in a connection string, and `Authorization: Bearer|Basic|Token` values.
+
+Formats are added where a token has a shape of its own. Some services' secrets do not (Twilio's auth token is 32 hex characters, like any hash): those are caught only under a secret-looking name, by the rule below.
 
 **Secret-named values** (`generic`): `.env` and shell lines (`DB_PASSWORD=…`, `export API_KEY="…"`) and quoted JSON/YAML/code values (`"apiKey": "…"`, `password: '…'`) whose name contains secret, token, password, passphrase, api key, private key, access key, auth key, client secret or credentials. Placeholders stay: `changeme`, `<your-key>`, `${API_KEY}`, `$TOKEN`, `xxxx`, numbers, booleans, `process.env.X`, and anything shorter than six characters.
 
