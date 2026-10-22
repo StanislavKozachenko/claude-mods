@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import type { ContextSnapshot } from '../types'
-import { allocate, formatTokens, legend, summary } from '../hooks/layout'
+import { allocate, formatTokens, isNearEdge, legend, summary, toCompact } from '../hooks/layout'
 
 const SNAPSHOT: ContextSnapshot = {
   categories: [
@@ -76,5 +76,20 @@ describe('summary and legend', () => {
     const width = narrow.reduce((sum, item, i) => sum + (i > 0 ? 2 : 0) + (item.name === '' ? 0 : 2) + item.label.length, 0)
     expect(width <= 40).toBe(true)
     expect(narrow.at(-1)?.label).toMatch(/^\+\d more$/)
+  })
+})
+
+describe('auto-compaction', () => {
+  test('the summary says how much is left before compaction', async () => {
+    expect(summary({ ...SNAPSHOT, compactAt: 167_000 })).toBe('30% · 60k / 200k · 107k to compact')
+    expect(summary(SNAPSHOT)).toBe('30% · 60k / 200k')
+    expect(toCompact({ ...SNAPSHOT, usedTokens: 170_000, compactAt: 167_000 })).toBe(0)
+  })
+
+  test('near the edge: 80% full, or less than a tenth of the window before compaction', async () => {
+    expect(isNearEdge(SNAPSHOT)).toBe(false)
+    expect(isNearEdge({ ...SNAPSHOT, percent: 80 })).toBe(true)
+    expect(isNearEdge({ ...SNAPSHOT, usedTokens: 150_000, percent: 75, compactAt: 167_000 })).toBe(true)
+    expect(isNearEdge({ ...SNAPSHOT, usedTokens: 150_000, percent: 75 })).toBe(false)
   })
 })
