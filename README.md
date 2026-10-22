@@ -1,6 +1,7 @@
 # claude-mods
 
 [![CI](https://img.shields.io/github/actions/workflow/status/StanislavKozachenko/claude-mods/ci.yml?branch=main&label=CI)](https://github.com/StanislavKozachenko/claude-mods/actions/workflows/ci.yml)
+[![Checked against Claude Code](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FStanislavKozachenko%2Fclaude-mods%2Fmain%2Fpackage.json&query=%24.devDependencies%5B%22%40anthropic-ai%2Fclaude-code%22%5D&label=checked%20against%20Claude%20Code&color=d97757)](https://github.com/StanislavKozachenko/claude-mods/pulls?q=is%3Apr+author%3Aapp%2Fdependabot+claude-code)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/StanislavKozachenko/claude-mods/blob/main/LICENSE)
 
 A collection of [Claude Code](https://code.claude.com) mods, shipped as plugins.
@@ -58,7 +59,7 @@ npm run check -- <name>                   # validate, typecheck and test one mod
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
-> Mods are an early-access Claude Code API and may change between releases. CI checks every mod against the pinned Claude Code version, and Dependabot bumps that pin.
+> Mods are an early-access Claude Code API and may change between releases. CI checks every mod against the pinned Claude Code version, and Dependabot bumps that pin. The **checked against Claude Code** badge above shows the pin on `main`: a bump reaches `main` only after every mod passed on Linux, Windows and macOS against it.
 
 ## License
 
