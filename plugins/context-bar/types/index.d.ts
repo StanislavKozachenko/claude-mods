@@ -15,6 +15,8 @@ export type ContextSnapshot = {
   maxTokens: number
   /** usedTokens over maxTokens, 0 to 100. */
   percent: number
+  /** The token count at which auto-compaction runs; absent when it is off. */
+  compactAt?: number
   /** When it was measured, in ms since the epoch. */
   at: number
 }

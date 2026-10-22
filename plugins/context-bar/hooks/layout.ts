@@ -68,7 +68,19 @@ export function allocate(snapshot: ContextSnapshot, width: number): Segment[] {
 
 /** `62% · 124k / 200k` */
 export function summary(snapshot: ContextSnapshot): string {
-  return `${snapshot.percent}% · ${formatTokens(snapshot.usedTokens)} / ${formatTokens(snapshot.maxTokens)}`
+  const left = toCompact(snapshot)
+  const compact = left === undefined ? '' : ` · ${formatTokens(left)} to compact`
+  return `${snapshot.percent}% · ${formatTokens(snapshot.usedTokens)} / ${formatTokens(snapshot.maxTokens)}${compact}`
+}
+
+/** Tokens left before auto-compaction runs; undefined when it is off. */
+export const toCompact = (snapshot: ContextSnapshot) =>
+  snapshot.compactAt === undefined ? undefined : Math.max(0, snapshot.compactAt - snapshot.usedTokens)
+
+/** Close to the edge: 80% full, or less than a tenth of the window before compaction. */
+export function isNearEdge(snapshot: ContextSnapshot, highPercent = 80): boolean {
+  const left = toCompact(snapshot)
+  return snapshot.percent >= highPercent || (left !== undefined && left < snapshot.maxTokens / 10)
 }
 
 /** Legend order: what takes the space first, then the buffer, free space last. */

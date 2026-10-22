@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { ContextSnapshot } from '../types'
-import { GLYPH, allocate, legend, summary } from './layout'
+import { GLYPH, allocate, isNearEdge, legend, summary } from './layout'
 
 const snapshot = atom({ plugin: 'context-bar', key: 'snapshot' } as const, null)
 const isHidden = atom({ plugin: 'context-bar', key: 'isHidden' } as const, false)
@@ -34,6 +34,7 @@ async function measure($: EngineInterface) {
     usedTokens: breakdown.totalTokens,
     maxTokens: breakdown.rawMaxTokens,
     percent: breakdown.percentage,
+    ...(breakdown.isAutoCompactEnabled && breakdown.autoCompactThreshold !== undefined ? { compactAt: breakdown.autoCompactThreshold } : {}),
     at: measuredAt,
   }
   await update($, snapshot, () => next)
@@ -108,7 +109,7 @@ export const register: Register = (on, options) => {
     const { Box, Text } = $.ui.resolve(e)
     const width = e.props.bodyColumns
     const label = summary(snap)
-    const isHigh = snap.percent >= HIGH_PERCENT
+    const isHigh = isNearEdge(snap, HIGH_PERCENT)
     const barWidth = width - label.length - 1 - MARGIN
 
     if (barWidth < MIN_BAR) {

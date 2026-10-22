@@ -3,7 +3,7 @@
 Shows the context window as a stacked bar above the prompt, one colour per `/context` category, so you see where the window goes without running `/context`.
 
 ```text
-32% · 317k / 1M ███▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+32% · 317k / 1M · 650k to compact ███▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░▒
 ■ Messages 270k  ■ System tools 37k  ■ Skills 6.6k  ■ System prompt 2.2k  ■ Autocompact buffer 33k  ■ Free space 650k
 ```
 
@@ -12,7 +12,8 @@ Shows the context window as a stacked bar above the prompt, one colour per `/con
 ```
 
 - Each segment is a `/context` category in the colour `/context` draws it in: used space `█`, the autocompact buffer `▒`, free space `░`; deferred tool schemas are left out, as `/context` leaves them out of the grid
-- The summary reads `percent · used / window` and turns bold from 80%
+- The summary reads `percent · used / window · left to compact`: the tokens left before auto-compaction runs (absent when it is off). The start of the `▒` buffer segment is where it runs
+- The summary turns bold from 80% full, or when less than a tenth of the window is left before compaction
 - The legend lists used categories largest first, then the buffer and free space, as many as fit the width (`+N more` for the rest)
 - In a narrow terminal the band shows `context 32%` alone
 - It yields to surveys and is not drawn over a subagent's transcript

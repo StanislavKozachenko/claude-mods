@@ -10,7 +10,7 @@ const CATEGORIES = [
 
 // The engine beneath the mod: a clock, a store, and a usage whose breakdown
 // the test sets.
-const engine = (on: On, percent = 60, stored: Record<string, unknown> = {}) => {
+const engine = (on: On, percent = 60, stored: Record<string, unknown> = {}, breakdownExtra: Record<string, unknown> = {}) => {
   const calls = { usage: 0 }
   const store = new Map(Object.entries(stored))
   const clock = mock.clock(on, { now: 1_000_000 })
@@ -30,7 +30,7 @@ const engine = (on: On, percent = 60, stored: Record<string, unknown> = {}) => {
       rateLimits: [],
       context: {
         window: 200_000,
-        breakdown: { categories: CATEGORIES, totalTokens: 120_000, maxTokens: 200_000, rawMaxTokens: 200_000, percentage: percent },
+        breakdown: { categories: CATEGORIES, totalTokens: 120_000, maxTokens: 200_000, rawMaxTokens: 200_000, percentage: percent, isAutoCompactEnabled: false, ...breakdownExtra },
       },
     } } as never
   })
@@ -136,4 +136,12 @@ test('a new session measures and draws at once', async ($, on) => {
 
   const ui = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND, props: BAND.props as never })
   expect(await ui.find({ type: 'Text', text: /60% · 120k/ })).toBeDefined()
+})
+
+test('with auto-compaction on, the summary says how much is left before it', async ($, on) => {
+  engine(on, 60, {}, { isAutoCompactEnabled: true, autoCompactThreshold: 167_000 })
+  await $.command.run(command('on'))
+
+  const ui = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND, props: BAND.props as never })
+  expect(await ui.find({ type: 'Text', text: /60% · 120k \/ 200k · 47k to compact/ })).toBeDefined()
 })
