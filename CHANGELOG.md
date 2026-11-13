@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [turn-stats 0.2.0] - 2026-11-13
+
+### Added
+
+- the whole breakdown in the ctrl+o view (#77)
+- lines added and removed (#75)
+
+### Fixed
+
+- keep each summary on its own turn's line and count only written files (#73)
+
+---
+
 ## [redact 0.2.0] - 2026-10-22
 
 ### Added

@@ -105,9 +105,9 @@
         "source": "git-subdir",
         "url": "https://github.com/StanislavKozachenko/claude-mods.git",
         "path": "plugins/turn-stats",
-        "ref": "turn-stats--v0.1.0"
+        "ref": "turn-stats--v0.2.0"
       },
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Adds what a turn did to its 'Worked for' line: tool calls by tool, failures, files changed and cost",
       "category": "productivity",
       "keywords": [
