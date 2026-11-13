@@ -106,13 +106,41 @@ export function summarize(stats: TurnStats, options: { topTools: number; isCostS
   }
   if (stats.failed > 0) parts.push(`${stats.failed} failed`)
   if (stats.files.length > 0) {
-    const [added, removed] = totalLines(stats)
-    const diff = [added > 0 ? `+${added}` : '', removed > 0 ? `-${removed}` : ''].filter(Boolean).join(' ')
-    parts.push(`${stats.files.length} ${stats.files.length === 1 ? 'file' : 'files'}${diff ? ` ${diff}` : ''}`)
+    const label = `${stats.files.length} ${stats.files.length === 1 ? 'file' : 'files'}`
+    parts.push(withDiff(label, totalLines(stats)))
   }
   if (options.isCostShown && stats.costUsd !== undefined && stats.costUsd > 0) parts.push(formatCost(stats.costUsd))
 
   return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/** `label +12 -3`, `label -3`, or the label alone when no line was counted. */
+function withDiff(label: string, [added, removed]: readonly [number, number]): string {
+  return [label, added > 0 ? `+${added}` : '', removed > 0 ? `-${removed}` : ''].filter(Boolean).join(' ')
+}
+
+/** `path` relative to `cwd` when it lies inside it, else as it is. */
+export function relativePath(path: string, cwd: string): string {
+  const base = cwd.replace(/[\\/]+$/, '')
+  if (base === '') return path
+
+  // Windows paths compare without case, as the file system does.
+  const isWindows = /^[a-z]:/i.test(base) || base.startsWith('\\\\')
+  const head = path.slice(0, base.length)
+  const isInside = (isWindows ? head.toLowerCase() === base.toLowerCase() : head === base) && /^[\\/]./.test(path.slice(base.length))
+
+  return isInside ? path.slice(base.length + 1) : path
+}
+
+/** How many changed files the expanded view names before `… N more`. */
+export const MAX_FILES = 20
+
+/** The changed files as the expanded view lists them: `src/a.ts +12 -3`, … */
+export function fileLines(stats: TurnStats, cwd: string): string[] {
+  const named = stats.files.slice(0, MAX_FILES).map(path => withDiff(relativePath(path, cwd), stats.lines?.[path] ?? [0, 0]))
+  const rest = stats.files.length - named.length
+
+  return rest > 0 ? [...named, `… ${rest} more`] : named
 }
 
 /** Keeps the newest `max` entries of an insertion-ordered record. */

@@ -68,6 +68,21 @@ test('the turn summary follows the engine line', async ($, on) => {
   }
 })
 
+test('the ctrl+o view names every tool and the files changed', { options: { topTools: 1 } }, async ($, on) => {
+  const { session } = engine(on)
+  on('session.cwd', () => ({ value: '/repo' }) as never)
+  await runTurn($, session)
+
+  const collapsed = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
+  expect(await collapsed.find({ type: 'Text', text: /^3 tools \(Bash 2, …\) · / })).toBeDefined()
+  expect(await collapsed.find({ type: 'Text', text: 'a.ts +2 -1' })).toBeUndefined()
+  await collapsed.unmount()
+
+  const expanded = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: { ...LINE.props, isExpanded: true } as never })
+  expect(await expanded.find({ type: 'Text', text: /^3 tools \(Bash 2, Edit 1\) · / })).toBeDefined()
+  expect(await expanded.find({ type: 'Text', text: 'a.ts +2 -1' })).toBeDefined()
+})
+
 test('a line it has no summary for is the engine line alone', async ($, on) => {
   engine(on)
   const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })

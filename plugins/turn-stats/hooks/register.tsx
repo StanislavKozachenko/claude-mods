@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { TurnStats } from '../types'
-import { addCall, emptyStats, keepNewest, summarize } from './stats'
+import { addCall, emptyStats, fileLines, keepNewest, summarize } from './stats'
 
 const lines = atom({ plugin: 'turn-stats', key: 'lines' } as const, {})
 
@@ -94,9 +94,12 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'TurnDuration' }, async ($, e, next) => {
     const stats = (await read($, lines))[e.requestId]
     const line = await next(e)
-    const text = stats ? summarize(stats, { topTools, isCostShown }) : undefined
-    if (text === undefined) return line
+    // The ctrl+o transcript has room for every tool and the files by name.
+    const isExpanded = e.props.isExpanded === true
+    const text = stats ? summarize(stats, { topTools: isExpanded ? Infinity : topTools, isCostShown }) : undefined
+    if (stats === undefined || text === undefined) return line
 
+    const files = isExpanded && stats.files.length > 0 ? fileLines(stats, await $.session.cwd().catch(() => '')) : []
     const { Box, Text } = $.ui.resolve(e)
 
     // The engine line takes the full width, so the summary goes on its own row
@@ -104,8 +107,13 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         {line}
-        <Box paddingLeft={2}>
+        <Box paddingLeft={2} flexDirection="column">
           <Text dimColor>{text}</Text>
+          {files.map(file => (
+            <Box key={file} paddingLeft={2}>
+              <Text dimColor>{file}</Text>
+            </Box>
+          ))}
         </Box>
       </Box>
     )
