@@ -18,6 +18,12 @@ describe('addCall', () => {
     expect(stats.failed).toBe(2)
     expect(stats.files).toEqual(['/a.ts', '/n.ipynb'])
   })
+
+  test('an edit held for review changes no file', async () => {
+    const stats = addCall(emptyStats(), 'Edit', { file_path: '/a.ts' }, false, { filePath: '/a.ts', staged: true })
+    expect(stats.tools).toEqual({ Edit: 1 })
+    expect(stats.files).toEqual([])
+  })
 })
 
 describe('summarize', () => {

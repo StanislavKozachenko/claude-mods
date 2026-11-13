@@ -12,11 +12,21 @@ export const FILE_TOOLS: Record<string, string> = {
 
 export const emptyStats = (): TurnStats => ({ tools: {}, failed: 0, files: [] })
 
-/** Adds one finished tool call to the stats. */
-export function addCall(stats: TurnStats, tool: string, input: Readonly<Record<string, unknown>>, isError: boolean): TurnStats {
+/** An edit held for the machine owner's review: the file is unchanged. */
+const isStaged = (result: unknown) => typeof result === 'object' && result !== null && (result as { staged?: unknown }).staged === true
+
+/** Adds one finished tool call to the stats; `result` is what the tool answered. */
+export function addCall(
+  stats: TurnStats,
+  tool: string,
+  input: Readonly<Record<string, unknown>>,
+  isError: boolean,
+  result?: unknown,
+): TurnStats {
   const field = FILE_TOOLS[tool]
   const path = field === undefined ? undefined : input[field]
-  const files = typeof path === 'string' && !isError && !stats.files.includes(path) ? [...stats.files, path] : stats.files
+  const isChanged = typeof path === 'string' && !isError && !isStaged(result)
+  const files = isChanged && !stats.files.includes(path) ? [...stats.files, path] : stats.files
 
   return {
     ...stats,

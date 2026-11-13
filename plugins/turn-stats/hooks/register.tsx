@@ -46,6 +46,8 @@ export const register: Register = (on, options) => {
 
   on('turn.start', async ($, e, next) => {
     if (!isSubagent(e)) {
+      // A summary still waiting for its line belongs to a turn that drew none.
+      pending = undefined
       current = emptyStats()
       costAtStart = await sessionCost($)
     }
@@ -57,7 +59,7 @@ export const register: Register = (on, options) => {
     const ran = await next(e)
     if (current) {
       const isFailed = ran.deny !== undefined || ran.isError === true
-      current = addCall(current, String(e.tool), e as Readonly<Record<string, unknown>>, isFailed)
+      current = addCall(current, String(e.tool), e as Readonly<Record<string, unknown>>, isFailed, ran.result)
     }
 
     return ran

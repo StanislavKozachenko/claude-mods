@@ -41,7 +41,7 @@ async function runTurn($: Engine, session: { costUsd: number }) {
   await $.tool.call({ tool: 'Bash', command: 'false' })
   await $.tool.call({ tool: 'Edit', file_path: '/repo/a.ts', old_string: 'a', new_string: 'b' })
   session.costUsd += 0.42
-  await $.turn.complete({ text: 'done', turnId: 't1', durationMs: 64_000, isAborted: false, answer: 'done', reason: 'completed' } as never)
+  await $.turn.complete({ text: 'done', turnId: 't1', durationMs: 64_000, isAborted: false, answer: 'done', reason: 'answer' } as never)
   // The kit has no store beneath session.append, so the append itself rejects;
   // the mod binds the summary before passing the row on, which is what counts.
   await $.session
@@ -80,6 +80,43 @@ test('a resumed session draws the stored summary', async ($, on) => {
 
   const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
   expect(await ui.find({ type: 'Text', text: /2 tools \(Read 2\)/ })).toBeDefined()
+})
+
+test("a turn without a line does not lend its summary to the next turn's", async ($, on) => {
+  const { session } = engine(on)
+
+  // A turn that ends without a turn_duration row: its summary waits for one.
+  await $.turn.start({ text: 'quick', turnId: 't0' } as never)
+  await $.tool.call({ tool: 'Read', file_path: '/repo/a.ts' } as never)
+  await $.turn.complete({ text: 'ok', turnId: 't0', durationMs: 900, isAborted: false, answer: 'ok', reason: 'answer' } as never)
+
+  // The next turn's row comes before its turn.complete.
+  await $.turn.start({ text: 'do it', turnId: 't1' } as never)
+  await $.tool.call({ tool: 'Bash', command: 'npm test' })
+  session.costUsd += 0.42
+  await $.session
+    .append({ message: { type: 'system', name: 'turn_duration', content: [] }, door: 'notice', uuid: ROW } as never)
+    .catch(() => undefined)
+
+  const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
+  expect(await ui.find({ type: 'Text', text: /^1 tool \(Bash 1\) · \$0\.42$/ })).toBeDefined()
+})
+
+test('an edit held for review is not a changed file', async ($, on) => {
+  // Registered first, so it answers the Write before the engine's own hook does.
+  on('tool.call', { tool: 'Write' }, () => ({ result: { type: 'update', filePath: '/repo/b.ts', content: '', structuredPatch: [], originalFile: '', staged: true } }) as never)
+  engine(on)
+
+  await $.turn.start({ text: 'do it', turnId: 't1' } as never)
+  await $.tool.call({ tool: 'Edit', file_path: '/repo/a.ts', old_string: 'a', new_string: 'b' })
+  await $.tool.call({ tool: 'Write', file_path: '/repo/b.ts', content: '' })
+  await $.turn.complete({ text: 'done', turnId: 't1', durationMs: 64_000, isAborted: false, answer: 'done', reason: 'answer' } as never)
+  await $.session
+    .append({ message: { type: 'system', name: 'turn_duration', content: [] }, door: 'notice', uuid: ROW } as never)
+    .catch(() => undefined)
+
+  const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
+  expect(await ui.find({ type: 'Text', text: /^2 tools \(Edit 1, Write 1\) · 1 file$/ })).toBeDefined()
 })
 
 test('cost: false and topTools: 0', { options: { cost: false, topTools: 0 } }, async ($, on) => {
