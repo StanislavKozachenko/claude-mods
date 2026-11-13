@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { addCall, changedLines, emptyStats, formatCost, keepNewest, summarize, toolLabel, totalLines } from '../hooks/stats'
+import { addCall, changedLines, emptyStats, fileLines, formatCost, keepNewest, MAX_FILES, relativePath, summarize, toolLabel, totalLines } from '../hooks/stats'
 
 const OPTIONS = { topTools: 3, isCostShown: true }
 
@@ -89,6 +89,29 @@ describe('summarize', () => {
 
   test('a turn without tools still shows its cost', async () => {
     expect(summarize({ ...emptyStats(), costUsd: 0.0123 }, OPTIONS)).toBe('$0.012')
+  })
+})
+
+describe('expanded view', () => {
+  test('relativePath', async () => {
+    expect(relativePath('/repo/src/a.ts', '/repo')).toBe('src/a.ts')
+    expect(relativePath('/repo/src/a.ts', '/repo/')).toBe('src/a.ts')
+    expect(relativePath('/repository/a.ts', '/repo')).toBe('/repository/a.ts')
+    expect(relativePath('/other/a.ts', '/repo')).toBe('/other/a.ts')
+    expect(relativePath('/repo', '/repo')).toBe('/repo')
+    expect(relativePath('C:\\Work\\App\\src\\a.ts', 'c:\\work\\app')).toBe('src\\a.ts')
+    expect(relativePath('/Repo/a.ts', '/repo')).toBe('/Repo/a.ts')
+    expect(relativePath('/repo/a.ts', '')).toBe('/repo/a.ts')
+  })
+
+  test('fileLines names each file with its lines, then how many more', async () => {
+    const stats = { tools: {}, failed: 0, files: ['/repo/a.ts', '/repo/b.ts', '/n.ipynb'], lines: { '/repo/a.ts': [12, 3], '/repo/b.ts': [0, 4] } as Record<string, [number, number]> }
+    expect(fileLines(stats, '/repo')).toEqual(['a.ts +12 -3', 'b.ts -4', '/n.ipynb'])
+
+    const many = { ...emptyStats(), files: Array.from({ length: MAX_FILES + 3 }, (_, i) => `/repo/f${i}`) }
+    const listed = fileLines(many, '/repo')
+    expect(listed).toHaveLength(MAX_FILES + 1)
+    expect(listed.at(-1)).toBe('… 3 more')
   })
 })
 

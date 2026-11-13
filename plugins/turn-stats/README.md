@@ -16,6 +16,17 @@ Adds what a turn did under the line Claude Code draws when the turn ends, so it 
 - **files**: distinct files `Edit`, `Write` and `NotebookEdit` changed, with the lines `Edit` and `Write` added and removed; an edit held for review changes no file
 - **cost**: what the turn cost, from the session's own cost total; shown when the session reports one
 
+In the ctrl+o transcript (and with `--verbose`) the summary names every tool and lists the files beneath it, relative to the session's directory:
+
+```text
+✻ Baked for 2m 3s
+  15 tools (Bash 6, Edit 5, Read 3, Grep 1) · 2 failed · 4 files +120 -34 · $0.42
+    src/parser.ts +96 -30
+    src/parser.test.ts +24
+    README.md -4
+    notes.ipynb
+```
+
 A turn that did nothing worth saying keeps the plain line. Summaries are kept across sessions (the last 200), so a resumed transcript shows them too; turns from before the mod was installed have none.
 
 ## How it finds the line
@@ -27,4 +38,4 @@ The line is the transcript's `turn_duration` row, and its render instance is tha
 | Option | Default | |
 | --- | --- | --- |
 | `cost` | `true` | Show the turn's cost |
-| `topTools` | `3` | How many tools to name in the breakdown (`0`: the count alone) |
+| `topTools` | `3` | How many tools to name in the breakdown (`0`: the count alone); the ctrl+o view names all |
