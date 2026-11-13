@@ -4,7 +4,7 @@ Adds what a turn did under the line Claude Code draws when the turn ends, so it 
 
 ```text
 ✻ Baked for 2m 3s
-  15 tools (Bash 6, Edit 5, Read 3, …) · 2 failed · 4 files · $0.42
+  15 tools (Bash 6, Edit 5, Read 3, …) · 2 failed · 4 files +120 -34 · $0.42
 ```
 
 ```text
@@ -13,7 +13,7 @@ Adds what a turn did under the line Claude Code draws when the turn ends, so it 
 
 - **tools**: every tool call of the turn, subagents' included, with the most used named first
 - **failed**: calls that ended in an error or were denied
-- **files**: distinct files `Edit`, `Write` and `NotebookEdit` changed
+- **files**: distinct files `Edit`, `Write` and `NotebookEdit` changed, with the lines `Edit` and `Write` added and removed; an edit held for review changes no file
 - **cost**: what the turn cost, from the session's own cost total; shown when the session reports one
 
 A turn that did nothing worth saying keeps the plain line. Summaries are kept across sessions (the last 200), so a resumed transcript shows them too; turns from before the mod was installed have none.
