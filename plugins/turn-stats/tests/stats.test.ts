@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { addCall, emptyStats, formatCost, keepNewest, summarize, toolLabel } from '../hooks/stats'
+import { addCall, changedLines, emptyStats, formatCost, keepNewest, summarize, toolLabel, totalLines } from '../hooks/stats'
 
 const OPTIONS = { topTools: 3, isCostShown: true }
 
@@ -26,6 +26,39 @@ describe('addCall', () => {
   })
 })
 
+describe('changedLines', () => {
+  const patch = (...hunks: string[][]) => ({ structuredPatch: hunks.map(lines => ({ oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines })) })
+
+  test('counts the lines a patch added and removed, across hunks', async () => {
+    expect(changedLines(patch([' a', '-b', '+c', '+d'], ['-e', '\\ No newline at end of file']))).toEqual([2, 2])
+  })
+
+  test("a new file's lines, from its content when the patch is empty", async () => {
+    expect(changedLines({ type: 'create', content: 'a\nb\nc\n', structuredPatch: [] })).toEqual([3, 0])
+    expect(changedLines({ type: 'create', content: 'a\r\nb', structuredPatch: [] })).toEqual([2, 0])
+    expect(changedLines({ type: 'create', content: '', structuredPatch: [] })).toEqual([0, 0])
+  })
+
+  test('nothing to count', async () => {
+    expect(changedLines({ type: 'update', content: 'a', structuredPatch: [] })).toBeUndefined()
+    expect(changedLines({ new_source: 'x', notebook_path: '/n.ipynb' })).toBeUndefined()
+    expect(changedLines(undefined)).toBeUndefined()
+  })
+
+  test('addCall keeps them per file, written edits only', async () => {
+    let stats = emptyStats()
+    stats = addCall(stats, 'Edit', { file_path: '/a.ts' }, false, patch(['-x', '+y']))
+    stats = addCall(stats, 'Edit', { file_path: '/a.ts' }, false, patch(['+z']))
+    stats = addCall(stats, 'Write', { file_path: '/b.ts' }, false, { type: 'create', content: 'one\ntwo\n', structuredPatch: [] })
+    stats = addCall(stats, 'Edit', { file_path: '/c.ts' }, false, { ...patch(['+q']), staged: true })
+    stats = addCall(stats, 'Edit', { file_path: '/d.ts' }, true, patch(['+q']))
+
+    expect(stats.lines).toEqual({ '/a.ts': [2, 1], '/b.ts': [2, 0] })
+    expect(totalLines(stats)).toEqual([4, 1])
+    expect(totalLines(emptyStats())).toEqual([0, 0])
+  })
+})
+
 describe('summarize', () => {
   test('tools, the most used first, then failures, files and cost', async () => {
     const stats = {
@@ -40,6 +73,13 @@ describe('summarize', () => {
   test('singulars, no breakdown, no cost', async () => {
     const stats = { tools: { Edit: 1 }, failed: 0, files: ['/a'], costUsd: 0.2 }
     expect(summarize(stats, { topTools: 0, isCostShown: false })).toBe('1 tool · 1 file')
+  })
+
+  test('lines added and removed follow the files', async () => {
+    const stats = { tools: { Edit: 3 }, failed: 0, files: ['/a', '/b'], lines: { '/a': [100, 30], '/b': [20, 4] } as Record<string, [number, number]> }
+    expect(summarize(stats, OPTIONS)).toBe('3 tools (Edit 3) · 2 files +120 -34')
+    expect(summarize({ ...stats, lines: { '/a': [0, 34] } }, OPTIONS)).toBe('3 tools (Edit 3) · 2 files -34')
+    expect(summarize({ ...stats, lines: { '/a': [0, 0] } }, OPTIONS)).toBe('3 tools (Edit 3) · 2 files')
   })
 
   test('nothing to say', async () => {

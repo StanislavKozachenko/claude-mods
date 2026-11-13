@@ -5,8 +5,9 @@ import type { Engine } from 'claude-code/testing'
 const ROW = 'b0d1c2e3-0000-4000-8000-000000000001'
 
 // The engine beneath the mod: a session whose cost the test moves, a store,
-// tool calls that succeed unless the command is `false`, the engine's own
-// "Worked for" line, and the rows a session appends.
+// tool calls that succeed unless the command is `false` (an Edit replacing one
+// line with two), the engine's own "Worked for" line, and the rows a session
+// appends.
 const engine = (on: On, stored: Record<string, unknown> = {}) => {
   const session = { costUsd: 1 }
   const store = new Map(Object.entries(stored))
@@ -20,11 +21,17 @@ const engine = (on: On, stored: Record<string, unknown> = {}) => {
   on('session.start', (_$, e) => e as never)
   on('turn.start', (_$, e) => ({ turnId: e.turnId }) as never)
   on('turn.complete', (_$, e) => ({ text: e.answer }) as never)
-  on('tool.call', (_$, e) =>
-    (String(e.tool) === 'Bash' && (e as { command?: string }).command === 'false'
-      ? { result: { stdout: '', stderr: 'failed', interrupted: false }, isError: true }
-      : { result: { stdout: 'ok', stderr: '', interrupted: false } }) as never,
-  )
+  on('tool.call', (_$, e) => {
+    if (String(e.tool) === 'Edit') {
+      const patch = [{ oldStart: 1, oldLines: 2, newStart: 1, newLines: 3, lines: [' x', '-a', '+b', '+c'] }]
+      return { result: { filePath: (e as { file_path?: string }).file_path, structuredPatch: patch } } as never
+    }
+    return (
+      String(e.tool) === 'Bash' && (e as { command?: string }).command === 'false'
+        ? { result: { stdout: '', stderr: 'failed', interrupted: false }, isError: true }
+        : { result: { stdout: 'ok', stderr: '', interrupted: false } }
+    ) as never
+  })
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
     return h(Text, { key: 'engine' }, 'Worked for 1m 4s') as never
@@ -56,7 +63,7 @@ test('the turn summary follows the engine line', async ($, on) => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'turn-stats', surface, ...LINE, props: LINE.props as never })
     expect(await ui.find({ type: 'Text', text: 'Worked for 1m 4s' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /3 tools \(Bash 2, Edit 1\) · 1 failed · 1 file · \$0\.42/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /3 tools \(Bash 2, Edit 1\) · 1 failed · 1 file \+2 -1 · \$0\.42/ })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -116,7 +123,7 @@ test('an edit held for review is not a changed file', async ($, on) => {
     .catch(() => undefined)
 
   const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
-  expect(await ui.find({ type: 'Text', text: /^2 tools \(Edit 1, Write 1\) · 1 file$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^2 tools \(Edit 1, Write 1\) · 1 file \+2 -1$/ })).toBeDefined()
 })
 
 test('cost: false and topTools: 0', { options: { cost: false, topTools: 0 } }, async ($, on) => {
@@ -124,5 +131,5 @@ test('cost: false and topTools: 0', { options: { cost: false, topTools: 0 } }, a
   await runTurn($, session)
 
   const ui = await $.ui.mount({ plugin: 'turn-stats', surface: 'terminal', ...LINE, props: LINE.props as never })
-  expect(await ui.find({ type: 'Text', text: /^3 tools · 1 failed · 1 file$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^3 tools · 1 failed · 1 file \+2 -1$/ })).toBeDefined()
 })

@@ -15,6 +15,40 @@ export const emptyStats = (): TurnStats => ({ tools: {}, failed: 0, files: [] })
 /** An edit held for the machine owner's review: the file is unchanged. */
 const isStaged = (result: unknown) => typeof result === 'object' && result !== null && (result as { staged?: unknown }).staged === true
 
+/** Lines in a file's content: `a\nb\n` and `a\nb` are 2, `` is 0. */
+const countLines = (content: string) => (content === '' ? 0 : content.replace(/\r?\n$/, '').split(/\r?\n/).length)
+
+/**
+ * The lines an `Edit` or `Write` result added and removed, from its patch, or
+ * a new file's whole content when the patch is empty; undefined when it says
+ * nothing of them (a `NotebookEdit`, a diff too large to make).
+ */
+export function changedLines(result: unknown): [added: number, removed: number] | undefined {
+  if (typeof result !== 'object' || result === null) return undefined
+  const { structuredPatch, type, content } = result as { structuredPatch?: unknown; type?: unknown; content?: unknown }
+
+  if (Array.isArray(structuredPatch) && structuredPatch.length > 0) {
+    let added = 0
+    let removed = 0
+    for (const hunk of structuredPatch as { lines?: unknown }[]) {
+      for (const line of Array.isArray(hunk?.lines) ? hunk.lines : []) {
+        if (typeof line !== 'string') continue
+        if (line.startsWith('+')) added++
+        else if (line.startsWith('-')) removed++
+      }
+    }
+    return [added, removed]
+  }
+  if (type === 'create' && typeof content === 'string') return [countLines(content), 0]
+
+  return undefined
+}
+
+/** What the turn added and removed across its files, `[0, 0]` when nothing was counted. */
+export function totalLines(stats: TurnStats): [added: number, removed: number] {
+  return Object.values(stats.lines ?? {}).reduce<[number, number]>(([a, r], [x, y]) => [a + x, r + y], [0, 0])
+}
+
 /** Adds one finished tool call to the stats; `result` is what the tool answered. */
 export function addCall(
   stats: TurnStats,
@@ -27,12 +61,19 @@ export function addCall(
   const path = field === undefined ? undefined : input[field]
   const isChanged = typeof path === 'string' && !isError && !isStaged(result)
   const files = isChanged && !stats.files.includes(path) ? [...stats.files, path] : stats.files
+  let lines = stats.lines
+  const diff = isChanged ? changedLines(result) : undefined
+  if (isChanged && diff) {
+    const [added, removed] = lines?.[path] ?? [0, 0]
+    lines = { ...lines, [path]: [added + diff[0], removed + diff[1]] }
+  }
 
   return {
     ...stats,
     tools: { ...stats.tools, [tool]: (stats.tools[tool] ?? 0) + 1 },
     failed: stats.failed + (isError ? 1 : 0),
     files,
+    ...(lines === undefined ? {} : { lines }),
   }
 }
 
@@ -47,7 +88,7 @@ export function formatCost(usd: number): string {
 }
 
 /**
- * `14 tools (Bash 6, Edit 5, Read 3) · 2 failed · 4 files · $0.42`, or
+ * `14 tools (Bash 6, Edit 5, Read 3) · 2 failed · 4 files +120 -34 · $0.42`, or
  * undefined when the turn did nothing worth a summary.
  */
 export function summarize(stats: TurnStats, options: { topTools: number; isCostShown: boolean }): string | undefined {
@@ -64,7 +105,11 @@ export function summarize(stats: TurnStats, options: { topTools: number; isCostS
     parts.push(`${calls} ${calls === 1 ? 'tool' : 'tools'}${breakdown}`)
   }
   if (stats.failed > 0) parts.push(`${stats.failed} failed`)
-  if (stats.files.length > 0) parts.push(`${stats.files.length} ${stats.files.length === 1 ? 'file' : 'files'}`)
+  if (stats.files.length > 0) {
+    const [added, removed] = totalLines(stats)
+    const diff = [added > 0 ? `+${added}` : '', removed > 0 ? `-${removed}` : ''].filter(Boolean).join(' ')
+    parts.push(`${stats.files.length} ${stats.files.length === 1 ? 'file' : 'files'}${diff ? ` ${diff}` : ''}`)
+  }
   if (options.isCostShown && stats.costUsd !== undefined && stats.costUsd > 0) parts.push(formatCost(stats.costUsd))
 
   return parts.length > 0 ? parts.join(' · ') : undefined

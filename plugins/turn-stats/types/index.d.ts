@@ -5,6 +5,11 @@ export type TurnStats = {
   failed: number
   /** Files Edit, Write or NotebookEdit changed. */
   files: string[]
+  /**
+   * Lines added and removed, by file, where the tool's result counted them;
+   * absent in summaries stored before the mod counted lines.
+   */
+  lines?: Record<string, [added: number, removed: number]>
   /** What the turn cost, in US dollars, when the session reports a cost. */
   costUsd?: number
 }
