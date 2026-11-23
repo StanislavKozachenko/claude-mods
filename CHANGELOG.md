@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [guard 0.3.0] - 2026-11-23
+
+### Added
+
+- more secret files (#90)
+
+### Fixed
+
+- read Bash quoting and check what a shell is handed to run (#87)
+
+---
+
 ## [turn-stats 0.2.0] - 2026-11-13
 
 ### Added
