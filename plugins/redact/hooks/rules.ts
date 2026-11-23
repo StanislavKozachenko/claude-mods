@@ -13,7 +13,7 @@ export type Rule = {
 
 export type Hits = Record<string, number>
 
-const SECRET_NAME = String.raw`[A-Za-z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|PASSPHRASE|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|AUTH_?KEY|CLIENT_SECRET|CREDENTIALS?)[A-Za-z0-9_]*`
+const SECRET_NAME = String.raw`[A-Za-z0-9_.-]*(?:SECRET|TOKEN|PASSWORD|PASSWD|PASSPHRASE|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|AUTH_?KEY|CLIENT_SECRET|CREDENTIALS?)[A-Za-z0-9_.-]*`
 const SECRET_KEY = String.raw`[A-Za-z0-9_.-]*(?:secret|token|password|passwd|passphrase|api[_-]?key|private[_-]?key|access[_-]?key|auth[_-]?key|client[_-]?secret|credentials?)[A-Za-z0-9_.-]*`
 
 /**
@@ -55,17 +55,29 @@ export const FORMAT_RULES: Rule[] = [
  * isNotSecretValue tell a value from code and from a name that only points at one.
  */
 export const GENERIC_RULES: Rule[] = [
-  // .env and shell style: DB_PASSWORD=..., export API_KEY="...", also as a
-  // line of Read or cat -n (`2→`), or of Grep or grep -n (`.env:2:`)
+  // .env, shell, cmd and .properties style: DB_PASSWORD=..., export API_KEY="...",
+  // set TOKEN=..., spring.datasource.password=..., a compose list item
+  // `- POSTGRES_PASSWORD=...`; also as a line of Read or cat -n (`2→`), or of
+  // Grep or grep -n (`.env:2:`)
   {
     kind: 'secret-value',
     pattern: new RegExp(
-      String.raw`(?<pre>^${LINE_PREFIX}[ \t]*(?:export[ \t]+)?(?<name>${SECRET_NAME})(?<eq>[ \t]*=[ \t]*)["']?)(?<secret>[^\s"'#]+)`,
+      String.raw`(?<pre>^${LINE_PREFIX}[ \t]*(?:-[ \t]+["']?)?(?:(?:export|set)[ \t]+)?(?<name>${SECRET_NAME})(?<eq>[ \t]*=[ \t]*)["']?)(?<secret>[^\s"'#]+)`,
       'gim',
     ),
   },
   // JSON, YAML, code: "apiKey": "...", password: '...', token = "..."
   { kind: 'secret-value', pattern: new RegExp(String.raw`(?<pre>["']?(?<name>${SECRET_KEY})["']?[ \t]*[:=][ \t]*["'])(?<secret>[^"'\s]+)(?<post>["'])`, 'gi') },
+  // Plain YAML: `password: hunter2`, `  - POSTGRES_PASSWORD: s3cr3t`, one word
+  // to the end of the line or a comment. Not block scalars, anchors, aliases,
+  // tags, flow collections or anything with spaces (prose, `${{ … }}`).
+  {
+    kind: 'secret-value',
+    pattern: new RegExp(
+      String.raw`(?<pre>^${LINE_PREFIX}[ \t]*(?:-[ \t]+)?["']?(?<name>${SECRET_KEY})["']?(?<colon>:[ \t]+))(?<secret>[^\s"'#|>&*!{\[%@${'`'}]\S*)(?=[ \t]+#|[ \t]*\r?$)`,
+      'gim',
+    ),
+  },
 ]
 
 /**
@@ -73,7 +85,10 @@ export const GENERIC_RULES: Rule[] = [
  * `passwordFile`, `secret-name`, `API_KEY_ID`.
  */
 const POINTER =
-  /(?:^|_)(?:names?|files?|paths?|dirs?|url|uri|endpoint|host|type|ref|ids?|count|length|size|limit|ttl|expiry|expires(?:_in|_at)?|header|prefix|env|var|field|label)$/
+  /(?:^|_)(?:names?|files?|paths?|dirs?|url|uri|endpoint|host|type|ref|ids?|count|length|size|limit|ttl|expiry|expires(?:_in|_at)?|header|prefix|env|var|field|label|policy|rotation|strength|algorithm|format|mode|scheme|provider|store|backend|manager|version|enabled|required|source)$/
+
+/** Names that only contain a secret word: `tokenizer`, `max_tokens`, `prompt_tokens`. */
+const NOT_SECRET_NAME = /tokeniz|(?:^|_)tokens$/
 
 /** `TOKEN_URL`, `tokenUrl`, `token-url` and `token.url` all read `token_url`. */
 const snake = (name: string) =>
@@ -87,20 +102,28 @@ const CALL = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\(/
 /** A variable or an attribute (`settings.OPENAI_KEY`, `self.token`). */
 const REFERENCE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/
 
+/** A type where plain YAML would hold a value: `password: string`, `token: Optional[str]`, `apiKey: string;`. */
+const TYPE =
+  /^(?:string|str|number|int|integer|float|bytes|bool|boolean|any|unknown|object|secretstr)[;,]?$|[[<(]|[;,]$/i
+
 /**
  * Whether a secret-named match is not a secret after all: code that assigns
- * to the name (a call, or a reference with code's spaces around `=`), or a
- * name that points at a secret (a file, a URL, an id) instead of holding it.
+ * to the name (a call, or a reference with code's spaces around `=`), a type
+ * in a plain-YAML-looking line (`isPlain`), or a name that points at a secret
+ * (a file, a URL, an id) instead of holding it.
  */
-export function isNotSecretValue(name: string, secret: string, eq?: string): boolean {
-  if (POINTER.test(snake(name))) return true
-  if (CALL.test(secret)) return true
+export function isNotSecretValue(name: string, secret: string, eq?: string, isPlain = false): boolean {
+  const snaked = snake(name)
+  if (POINTER.test(snaked) || NOT_SECRET_NAME.test(snaked)) return true
+  if (isPlain && TYPE.test(secret)) return true
+  // a call, or a statement that ends in `;` (`this.token=token;`)
+  if (CALL.test(secret) || (secret.endsWith(';') && REFERENCE.test(secret.slice(0, -1)))) return true
   return eq !== undefined && eq.trim() !== eq && REFERENCE.test(secret)
 }
 
 /** Values that are not secrets even under a secret-looking name. */
 const NOT_SECRET =
-  /^(?:changeme|change_me|change-me|secret|password|token|your[_-].*|xxx+|\*+|\.{3,}|<.*>|\$\{.*\}|\$[A-Za-z_][A-Za-z0-9_]*|\{\{.*\}\}|%.*%|example.*|placeholder|dummy|test|none|null|nil|undefined|true|false|yes|no|on|off|\d+(?:\.\d+)?|process\.env\..*|os\.environ.*|\[redacted:.*)$/i
+  /^(?:changeme|change_me|change-me|secret|password|token|your[_-].*|xxx+|\*+|\.{3,}|<.*>|\$\{.*\}|\$[A-Za-z_][A-Za-z0-9_]*|\{\{.*\}\}|%.*%|example.*|placeholder|dummy|test|none|null|nil|undefined|true|false|yes|no|on|off|\d+(?:\.\d+)?|[\^~>=<v]*\d+(?:\.\d+){1,3}(?:[-+][\w.]+)?|process\.env\..*|os\.environ.*|\[redacted:.*)$/i
 
 const MIN_GENERIC_LENGTH = 6
 
@@ -145,7 +168,7 @@ export function redactText(text: string, rules: Rule[], allow: ReadonlySet<strin
 
       if (allow.has(secret) || secret.startsWith('[redacted:')) return match
       if (kind === 'secret-value' && (secret.length < MIN_GENERIC_LENGTH || isPlaceholder(secret))) return match
-      if (kind === 'secret-value' && hasGroups && isNotSecretValue(groups.name ?? '', secret, groups.eq)) return match
+      if (kind === 'secret-value' && hasGroups && isNotSecretValue(groups.name ?? '', secret, groups.eq, groups.colon !== undefined)) return match
       if (kind === 'url-password' && isPlaceholder(secret)) return match
 
       hits[kind] = (hits[kind] ?? 0) + 1

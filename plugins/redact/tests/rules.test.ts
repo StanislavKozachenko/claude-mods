@@ -123,6 +123,53 @@ describe('secret-named values', () => {
     }
   })
 
+  test('plain YAML, compose lists, cmd and .properties', async () => {
+    const cases: [string, string][] = [
+      ['      POSTGRES_PASSWORD: s3cr3tP4ss', '      POSTGRES_PASSWORD: [redacted:secret-value]'],
+      ['  password: hunter2hunter2   # rotate monthly', '  password: [redacted:secret-value]   # rotate monthly'],
+      ['  - API_TOKEN: abcdef123456', '  - API_TOKEN: [redacted:secret-value]'],
+      ['  "client-secret": abcdef123456', '  "client-secret": [redacted:secret-value]'],
+      ['data:\n  password: cGFzc3dvcmQxMjM=\n', 'data:\n  password: [redacted:secret-value]\n'],
+      ['  password: hunter2hunter2\r\n', '  password: [redacted:secret-value]\r\n'],
+      ['     5→  password: hunter2hunter2', '     5→  password: [redacted:secret-value]'],
+      ['compose.yml:12:      - POSTGRES_PASSWORD=s3cr3tP4ss', 'compose.yml:12:      - POSTGRES_PASSWORD=[redacted:secret-value]'],
+      ['      - "POSTGRES_PASSWORD=s3cr3tP4ss"', '      - "POSTGRES_PASSWORD=[redacted:secret-value]"'],
+      ['set API_KEY=abcdef123456', 'set API_KEY=[redacted:secret-value]'],
+      ['spring.datasource.password=s3cr3tP4ss', 'spring.datasource.password=[redacted:secret-value]'],
+    ]
+    for (const [input, output] of cases) expect(clean(input)).toBe(output)
+  })
+
+  test('YAML look-alikes stay', async () => {
+    for (const text of [
+      '  token: ${{ secrets.GITHUB_TOKEN }}',
+      '  password: |',
+      '  password: >-',
+      '  password: &pw',
+      '  password: *pw',
+      '  password: !Ref DbPassword',
+      '  tokens: [a, b]',
+      '  password: changeme',
+      '  password: 12345678',
+      '  secretName: prod-db-credentials',
+      '  secretKeyRef:',
+      '  tokenizer: bert-base-uncased',
+      '  max_tokens: 4096',
+      '  password_policy: strict',
+      '- password: the database password, from the vault',
+      'Token: see the setup guide',
+      '    this.token=token;',
+      '  apiKey: string;',
+      '  token: Optional[str]',
+      '  secret: Promise<Secret>',
+      '  password: SecretStr',
+      '"@aws-sdk/credential-providers": "^3.637.0",',
+      '"secret-handshake": "1.1.21"',
+    ]) {
+      expect(clean(text)).toBe(text)
+    }
+  })
+
   test('code that assigns to a secret-named variable stays', async () => {
     for (const text of [
       '    token = request.headers.get("Authorization")',
