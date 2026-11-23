@@ -16,6 +16,13 @@ export type Hits = Record<string, number>
 const SECRET_NAME = String.raw`[A-Za-z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|PASSPHRASE|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|AUTH_?KEY|CLIENT_SECRET|CREDENTIALS?)[A-Za-z0-9_]*`
 const SECRET_KEY = String.raw`[A-Za-z0-9_.-]*(?:secret|token|password|passwd|passphrase|api[_-]?key|private[_-]?key|access[_-]?key|auth[_-]?key|client[_-]?secret|credentials?)[A-Za-z0-9_.-]*`
 
+/**
+ * What a tool puts before a file's line: a line number (Read, `cat -n`:
+ * `     2→`, `2\t`) or a path with or without one (Grep, `grep -rn`:
+ * `.env:2:`, `C:\app\.env-3-` on a context line, `.env:`).
+ */
+const LINE_PREFIX = String.raw`(?:[ \t]*\d+(?:\t|→|:)|(?:[A-Za-z]:)?[^\s:]*?(?:[:-]\d+)?[:-])?`
+
 /** Well-known formats: precise enough to redact wherever they appear. */
 export const FORMAT_RULES: Rule[] = [
   { kind: 'private-key', pattern: /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g },
@@ -48,10 +55,14 @@ export const FORMAT_RULES: Rule[] = [
  * isNotSecretValue tell a value from code and from a name that only points at one.
  */
 export const GENERIC_RULES: Rule[] = [
-  // .env and shell style: DB_PASSWORD=..., export API_KEY="..."
+  // .env and shell style: DB_PASSWORD=..., export API_KEY="...", also as a
+  // line of Read or cat -n (`2→`), or of Grep or grep -n (`.env:2:`)
   {
     kind: 'secret-value',
-    pattern: new RegExp(String.raw`(?<pre>^[ \t]*(?:export[ \t]+)?(?<name>${SECRET_NAME})(?<eq>[ \t]*=[ \t]*)["']?)(?<secret>[^\s"'#]+)`, 'gim'),
+    pattern: new RegExp(
+      String.raw`(?<pre>^${LINE_PREFIX}[ \t]*(?:export[ \t]+)?(?<name>${SECRET_NAME})(?<eq>[ \t]*=[ \t]*)["']?)(?<secret>[^\s"'#]+)`,
+      'gim',
+    ),
   },
   // JSON, YAML, code: "apiKey": "...", password: '...', token = "..."
   { kind: 'secret-value', pattern: new RegExp(String.raw`(?<pre>["']?(?<name>${SECRET_KEY})["']?[ \t]*[:=][ \t]*["'])(?<secret>[^"'\s]+)(?<post>["'])`, 'gi') },
