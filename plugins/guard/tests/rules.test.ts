@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { buildPolicy, checkCommand, checkPath, globToRegExp, isDangerousTarget, splitCommand, stripPrefixes } from '../hooks/rules'
+import { buildPolicy, checkCommand, checkPath, globToRegExp, innerScript, isDangerousTarget, parseBash, splitCommand, stripPrefixes } from '../hooks/rules'
 
 const { policy } = buildPolicy({})
 const ruleOf = (command: string) => checkCommand(command, policy)?.rule
@@ -135,6 +135,61 @@ describe('blockCommands', () => {
     const { policy: custom, problems } = buildPolicy({ blockCommands: ['\\bnpm publish\\b', '('] })
     expect(checkCommand('npm publish --access public', custom)?.rule).toBe('blocked-command')
     expect(problems).toEqual(['invalid blockCommands pattern /(/'])
+  })
+})
+
+describe('what a shell is handed to run', () => {
+  test('sh -c, eval, a heredoc to a shell, timeout and stdbuf are checked', async () => {
+    const cases: [string, string][] = [
+      ['bash -c "rm -rf ~"', 'rm-rf'],
+      ["sh -c 'cat .env'", 'secret-file'],
+      ['bash -lc "git push -f"', 'git-force-push'],
+      ['zsh -o pipefail -c "cd / && rm -rf *"', 'rm-rf'],
+      ['bash -c "sh -c \'git reset --hard\'"', 'git-reset-hard'],
+      ['eval "rm -rf /"', 'rm-rf'],
+      ["bash <<'EOF'\necho start\nrm -rf ~\nEOF", 'rm-rf'],
+      ['find . -name "*.tmp" | xargs -0 sh -c \'rm -rf /\'', 'rm-rf'],
+      ['timeout 10 rm -rf ~', 'rm-rf'],
+      ['timeout -s KILL 5 git reset --hard', 'git-reset-hard'],
+      ['stdbuf -oL cat .env', 'secret-file'],
+      ['echo "$(cat .env)"', 'secret-file'],
+      ['echo `rm -rf ~`', 'rm-rf'],
+      ['ls 2>&1; rm -rf ~', 'rm-rf'],
+      ['printenv>.env', 'secret-file'],
+      ['cat <<EOF > .env\nTOKEN=1\nEOF', 'secret-file'],
+    ]
+    for (const [command, rule] of cases) expect([command, ruleOf(command)]).toEqual([command, rule])
+  })
+
+  test('quoted text, comments and heredoc data are not commands', async () => {
+    for (const command of [
+      'git commit -m "docs: guard; rm -rf ~ is blocked now"',
+      "git commit -m 'fix: git push --force | is caught'",
+      'git commit -m "$(cat <<\'EOF\'\nfix(guard): catch rm -rf / (and friends)\n\nrm -rf ~ used to pass; it doesn\'t now.\nEOF\n)"',
+      'echo "rm -rf /" > notes.txt',
+      'grep -n "git reset --hard" docs/*.md',
+      'ls # rm -rf ~',
+      'cat <<EOF > notes.md\nrm -rf ~\nEOF',
+      'bash -c "npm test && npm run build"',
+      'bash scripts/build.sh',
+      'timeout 60 npm test',
+      'sh -c \'echo "${HOME:?}"\'',
+    ]) {
+      expect([command, ruleOf(command)]).toEqual([command, undefined])
+    }
+  })
+
+  test('parseBash keeps quoting and heredocs', async () => {
+    expect(parseBash(`a "b; c" 'd && e' && f`).map(s => s.words)).toEqual([['a', 'b; c', 'd && e'], ['f']])
+    expect(parseBash('a 2>&1 | b &>> log').map(s => s.words)).toEqual([['a', '2>&', '1'], ['b', '&>>', 'log']])
+    expect(parseBash('x "$(y z)" w').map(s => s.words)).toEqual([['y', 'z'], ['x', '$(…)', 'w']])
+    expect(parseBash("cat <<-'EOF' | sh\n\tone\n\tEOF\nnext")).toEqual([
+      { words: ['cat'], heredocs: ['\tone'] },
+      { words: ['sh'], heredocs: [] },
+      { words: ['next'], heredocs: [] },
+    ])
+    expect(innerScript(['bash', '-e', '-c', 'x', 'arg0'])).toBe('x')
+    expect(innerScript(['bash', 'script.sh'])).toBeUndefined()
   })
 })
 
