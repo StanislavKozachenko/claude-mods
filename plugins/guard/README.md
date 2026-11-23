@@ -23,7 +23,7 @@ Settings `permissions.deny` rules match command prefixes, so `cd app && rm -rf ~
 | `pipe-to-shell` | `curl … \| sh`, `wget … \| sudo bash` | `curl -o install.sh …` |
 | `fork-bomb` | `:(){ :\|:& };:` | |
 
-**Secret files**: `.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_ed25519` and friends, `.npmrc`, `.pypirc`, `.netrc`, `.git-credentials`, `.aws/credentials`, `.docker/config.json`, except `.env.example`, `.env.sample`, `.env.template`, `.env.dist` and `*.pub`.
+**Secret files**: `.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_ed25519` and friends, `.npmrc`, `.pypirc`, `.netrc`, `.git-credentials`, `.aws/credentials`, `.docker/config.json`, direnv's `.envrc`, `.pgpass`, `.my.cnf`, `.htpasswd`, keystores (`*.jks`, `*.keystore`), and CLI tokens: `.kube/config`, GitHub CLI's `hosts.yml`, `.vault-token`, Terraform's `.terraformrc` and `credentials.tfrc.json`, gcloud's `application_default_credentials.json` and `credentials.db`, Azure CLI's `msal_token_cache.json`, `.cargo/credentials`, `.gem/credentials` and your own `.gradle/gradle.properties`; except `.env.example`, `.env.sample`, `.env.template`, `.env.dist` and `*.pub`.
 
 They are blocked for `Read`, `Edit`, `Write`, `NotebookEdit` and `Grep`, on the path as given and on where it resolves (a symlink to `.env` is `.env`), and in shell commands that read, send or write them: `cat .env`, `grep KEY .env`, `curl -d @.env`, `echo X >> .env`, `cp .env /tmp`, `git add .env`. Commands that only name them pass: `cp .env.example .env`, `echo .env >> .gitignore`, `source .env`.
 

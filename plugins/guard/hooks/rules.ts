@@ -39,6 +39,28 @@ export const SECRET_GLOBS = [
   '.git-credentials',
   '.aws/credentials',
   '.docker/config.json',
+  // direnv, database clients, web server and Java keystores
+  '.envrc',
+  '.pgpass',
+  '.my.cnf',
+  '.htpasswd',
+  '*.jks',
+  '*.keystore',
+  // CLI tokens: Kubernetes, GitHub CLI (Unix and Windows), Vault, Terraform,
+  // gcloud, Azure CLI, Cargo, RubyGems, the user's Gradle properties
+  '.kube/config',
+  'gh/hosts.yml',
+  'GitHub CLI/hosts.yml',
+  '.vault-token',
+  '.terraformrc',
+  'credentials.tfrc.json',
+  'gcloud/application_default_credentials.json',
+  'gcloud/credentials.db',
+  '.azure/msal_token_cache.json',
+  '.cargo/credentials',
+  '.cargo/credentials.toml',
+  '.gem/credentials',
+  '.gradle/gradle.properties',
 ]
 
 export const SECRET_EXCEPTIONS = ['.env.example', '.env.sample', '.env.template', '.env.dist', '*.pub']
