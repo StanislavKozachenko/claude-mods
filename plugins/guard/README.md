@@ -2,7 +2,7 @@
 
 Blocks destructive shell commands and access to secret files before they run.
 
-Settings `permissions.deny` rules match command prefixes, so `cd app && rm -rf ~`, `rm -fr /`, `rm -r -f /` or `git push origin main -f` get past them. guard sees every tool call inside Claude Code, splits compound commands, normalizes flags and wrappers (`sudo`, `env`, `VAR=1`), and resolves symlinks before it lets a file through.
+Settings `permissions.deny` rules match command prefixes, so `cd app && rm -rf ~`, `rm -fr /`, `rm -r -f /` or `git push origin main -f` get past them. guard sees every tool call inside Claude Code, splits compound commands the way Bash quotes them, looks inside what a shell is handed to run (`bash -c "…"`, `eval`, `$(…)`, a heredoc to `sh`), normalizes flags and wrappers (`sudo`, `env`, `VAR=1`, `timeout`), and resolves symlinks before it lets a file through. Quoted text and heredoc data are not commands: a commit message that mentions `rm -rf ~` passes.
 
 ```text
 /plugin install guard@claude-mods
@@ -67,4 +67,4 @@ Set them in `/config` or under `pluginConfigs.guard.options` in settings:
 
 ## Limits
 
-guard is a safety net against accidents, not a sandbox. The command check is a heuristic, not a shell parser: `eval`, scripts the model writes and then runs, interpreters (`python -c`, `node -e`), PowerShell script blocks and `Start-Process` are not inspected. Use Claude Code's sandbox and permission modes for containment.
+guard is a safety net against accidents, not a sandbox. The command check is a heuristic, not a full shell: aliases, functions, variables built up and expanded (`c=rm; $c -rf ~`), scripts the model writes and then runs, interpreters (`python -c`, `node -e`), PowerShell script blocks and `Start-Process` are not inspected. Use Claude Code's sandbox and permission modes for containment.

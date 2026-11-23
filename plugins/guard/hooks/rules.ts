@@ -139,8 +139,28 @@ export function checkPath(path: string, policy: Policy): Verdict | undefined {
 // ---------------------------------------------------------------------------
 // Shell commands
 
-const PREFIXES = new Set(['sudo', 'doas', 'command', 'builtin', 'exec', 'nohup', 'time', 'nice', 'ionice', 'xargs'])
-const OPTION_WITH_VALUE = new Set(['-u', '-g', '-n', '-c', '-C', '-p', '-I', '-L', '-P'])
+/** Wrappers that run the command after them, with their options that take a value. */
+const PREFIXES: Record<string, ReadonlySet<string>> = {
+  sudo: new Set(['-u', '-g', '-p', '-C', '-h', '-r', '-t', '-U', '-D', '-R', '-T']),
+  doas: new Set(['-u', '-C']),
+  command: new Set(),
+  builtin: new Set(),
+  exec: new Set(['-a']),
+  nohup: new Set(),
+  time: new Set(['-f', '-o']),
+  nice: new Set(['-n']),
+  ionice: new Set(['-c', '-n', '-p']),
+  xargs: new Set(['-I', '-L', '-P', '-n', '-s', '-d', '-E', '-a']),
+  // `timeout -s KILL 5 cmd`: the duration comes before the command
+  timeout: new Set(['-s', '-k']),
+  stdbuf: new Set(['-i', '-o', '-e']),
+}
+
+/** Shells whose `-c` string, or heredoc, is a command line of its own. */
+const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh', 'mksh', 'ash'])
+
+/** How deep `bash -c "sh -c '…'"` is followed. */
+const MAX_DEPTH = 4
 
 /** Programs that read, copy, send or edit the files they are given. */
 const FILE_TOUCHERS = new Set([
@@ -158,7 +178,8 @@ const unquote = (token: string) => token.replace(/^(['"])(.*)\1$/, '$2')
 /**
  * Splits a command line into simple commands (on `;`, `&&`, `||`, `|`, `&`,
  * newlines, `$(`, backticks and parentheses) and each into words. Quoting is
- * honoured for grouping only: this is a heuristic, not a shell parser.
+ * honoured for grouping only: this is a heuristic, not a shell parser. The
+ * PowerShell check reads with it; Bash has parseBash.
  */
 export function splitCommand(command: string): string[][] {
   return command
@@ -167,7 +188,162 @@ export function splitCommand(command: string): string[][] {
     .filter(words => words.length > 0)
 }
 
-/** Drops wrappers (`sudo -u x`, `env A=1`, `VAR=1`, `nohup`) to reach the program and its arguments. */
+/** One simple command of a Bash line: its words, quotes removed, and the bodies of the heredocs it reads. */
+export type Segment = { words: string[]; heredocs: string[] }
+
+/**
+ * Splits a Bash command line into simple commands and their words, the way
+ * Bash quotes: separators (`;`, `&&`, `||`, `|`, `&`, newlines, parentheses)
+ * and comments count outside quotes only; inside single quotes everything is
+ * text, inside double quotes only `$(…)` and backticks run. Each `$(…)` and
+ * backtick body is a command line of its own, its commands listed with the
+ * rest, and stands in its word as `$(…)`. A heredoc's body is data, kept on
+ * the command that reads it. Still a heuristic: no aliases, functions or
+ * expansions.
+ */
+export function parseBash(command: string): Segment[] {
+  return parseFrom(command, 0, false).segments
+}
+
+function parseFrom(src: string, start: number, isSubstitution: boolean): { segments: Segment[]; end: number } {
+  const segments: Segment[] = []
+  const pending: { delimiter: string; isTabStripped: boolean; into: Segment }[] = []
+  let current: Segment = { words: [], heredocs: [] }
+  let word = ''
+  let hasWord = false
+  let depth = 0
+
+  const endWord = () => {
+    if (hasWord) current.words.push(word)
+    word = ''
+    hasWord = false
+  }
+  const endSegment = () => {
+    endWord()
+    if (current.words.length > 0) segments.push(current)
+    current = { words: [], heredocs: [] }
+  }
+  // `$(…)` from just after its `(`: resolves to the index of its `)`
+  const substitute = (from: number) => {
+    const inner = parseFrom(src, from, true)
+    segments.push(...inner.segments)
+    word += '$(…)'
+    hasWord = true
+    return inner.end
+  }
+  // A backtick body from just after its opening backtick: resolves to the index of the closing one
+  const backtick = (from: number) => {
+    let j = from
+    let body = ''
+    for (; j < src.length && src[j] !== '`'; j++) body += src[j] === '\\' && j + 1 < src.length ? src[++j] : src[j]
+    segments.push(...parseBash(body))
+    word += '$(…)'
+    hasWord = true
+    return j
+  }
+  // The heredoc bodies that start after a newline: resolves to the index after the last delimiter line
+  const readHeredocs = (from: number) => {
+    let pos = from
+    for (const { delimiter, isTabStripped, into } of pending) {
+      const body: string[] = []
+      while (pos < src.length) {
+        const newline = src.indexOf('\n', pos)
+        const line = src.slice(pos, newline < 0 ? src.length : newline)
+        pos = newline < 0 ? src.length : newline + 1
+        if ((isTabStripped ? line.replace(/^\t+/, '') : line).replace(/\r$/, '') === delimiter) break
+        body.push(line)
+      }
+      into.heredocs.push(body.join('\n'))
+    }
+    pending.length = 0
+    return pos
+  }
+
+  let i = start
+  for (; i < src.length; i++) {
+    const c = src[i]!
+
+    if (c === '\\') {
+      if (src[i + 1] === '\n') i++
+      else if (i + 1 < src.length) {
+        word += src[++i]
+        hasWord = true
+      }
+    } else if (c === "'") {
+      const close = src.indexOf("'", i + 1)
+      const end = close < 0 ? src.length : close
+      word += src.slice(i + 1, end)
+      hasWord = true
+      i = end
+    } else if (c === '"') {
+      hasWord = true
+      let j = i + 1
+      for (; j < src.length && src[j] !== '"'; j++) {
+        if (src[j] === '\\' && '$`"\\\n'.includes(src[j + 1] ?? 'x')) {
+          if (src[j + 1] !== '\n') word += src[j + 1]
+          j++
+        } else if (src[j] === '$' && src[j + 1] === '(') {
+          j = substitute(j + 2)
+        } else if (src[j] === '`') {
+          j = backtick(j + 1)
+        } else {
+          word += src[j]
+        }
+      }
+      i = j
+    } else if (c === '$' && src[i + 1] === '(') {
+      i = substitute(i + 2)
+    } else if (c === '`') {
+      i = backtick(i + 1)
+    } else if (c === '#' && !hasWord) {
+      while (i + 1 < src.length && src[i + 1] !== '\n') i++
+    } else if (c === ' ' || c === '\t' || c === '\r') {
+      endWord()
+    } else if (c === '<' || c === '>' || (c === '&' && src[i + 1] === '>')) {
+      // A redirection is a word of its own (`>`, `2>&`, `&>>`, `<<<`), its target the next word
+      if (hasWord && !/^\d+$/.test(word)) endWord()
+      let op = word
+      word = ''
+      hasWord = false
+      while (i < src.length && '<>&|'.includes(src[i]!) && !(op.endsWith('&') && src[i] === '&')) {
+        if (src[i] === '|' && !op.endsWith('>')) break
+        op += src[i++]
+      }
+      i--
+      if (/(?:^|[^<])<<$/.test(op)) {
+        // A heredoc: `<<EOF`, `<<-'EOF'`, `<< "EOF"`; its body starts after the next newline
+        const isTabStripped = src[i + 1] === '-'
+        if (isTabStripped) i++
+        while (src[i + 1] === ' ' || src[i + 1] === '\t') i++
+        let delimiter = ''
+        while (i + 1 < src.length && !/[\s;|&()<>]/.test(src[i + 1]!)) delimiter += src[++i]
+        pending.push({ delimiter: delimiter.replace(/['"\\]/g, ''), isTabStripped, into: current })
+      } else {
+        current.words.push(op)
+      }
+    } else if (c === '\n') {
+      endSegment()
+      i = readHeredocs(i + 1) - 1
+    } else if (c === '(') {
+      endSegment()
+      depth++
+    } else if (c === ')') {
+      endSegment()
+      if (isSubstitution && depth === 0) return { segments, end: i }
+      depth = Math.max(0, depth - 1)
+    } else if (c === ';' || c === '|' || c === '&') {
+      endSegment()
+    } else {
+      word += c
+      hasWord = true
+    }
+  }
+  endSegment()
+
+  return { segments, end: i }
+}
+
+/** Drops wrappers (`sudo -u x`, `env A=1`, `VAR=1`, `nohup`, `timeout 5`) to reach the program and its arguments. */
 export function stripPrefixes(words: string[]): string[] {
   const rest = [...words]
 
@@ -175,22 +351,48 @@ export function stripPrefixes(words: string[]): string[] {
     const first = rest[0]
     if (first === undefined) return rest
     const name = basename(first)
+    const valued = Object.hasOwn(PREFIXES, name) ? PREFIXES[name] : undefined
 
     if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(first)) {
       rest.shift()
     } else if (name === 'env') {
       rest.shift()
       while (rest[0] !== undefined && (rest[0].startsWith('-') || rest[0].includes('='))) rest.shift()
-    } else if (PREFIXES.has(name)) {
+    } else if (valued) {
       rest.shift()
       while (rest[0]?.startsWith('-')) {
         const option = rest.shift()!
-        if (OPTION_WITH_VALUE.has(option)) rest.shift()
+        if (valued.has(option)) rest.shift()
       }
+      if (name === 'timeout' && /^\d/.test(rest[0] ?? '')) rest.shift()
     } else {
       return rest
     }
   }
+}
+
+/**
+ * The command line a shell is given to run, if any: the string after `-c`
+ * (`bash -c`, `sh -lc`, `bash -o pipefail -c`), or the words of `eval`.
+ */
+export function innerScript(words: readonly string[]): string | undefined {
+  const name = basename(words[0] ?? '')
+  if (name === 'eval') return words.slice(1).join(' ')
+  if (!SHELLS.has(name)) return undefined
+
+  let hasScript = false
+  for (let i = 1; i < words.length; i++) {
+    const word = words[i]!
+    if (word === '--') return hasScript ? words[i + 1] : undefined
+    if (/^[-+][A-Za-z]+$/.test(word)) {
+      if (word.startsWith('-') && word.includes('c')) hasScript = true
+      if (/^[-+][oO]$/.test(word)) i++
+    } else if (!word.startsWith('--')) {
+      return hasScript ? word : undefined
+    }
+  }
+
+  return undefined
 }
 
 const basename = (word: string) => normalize(word).split('/').pop() ?? word
@@ -323,7 +525,7 @@ function checkSecretMentions(words: string[], policy: Policy): Verdict | undefin
   for (let i = 0; i < args.length; i++) {
     if (i === destination) continue
     const arg = args[i]!
-    const isRedirect = /^\d*(>>?|<)&?$/.test(arg)
+    const isRedirect = /^(?:\d*|&)(?:>>?\|?|<)&?$/.test(arg)
     const target = isRedirect ? args[i + 1] : arg.replace(/^\d*(>>?|<)&?/, '')
 
     if (!isRedirect && !/^\d*(>>?|<)/.test(arg) && !FILE_TOUCHERS.has(name) && !isGitAdd) continue
@@ -336,8 +538,12 @@ function checkSecretMentions(words: string[], policy: Policy): Verdict | undefin
   return undefined
 }
 
-/** Checks a whole Bash command line; the first rule that fires wins. */
-export function checkCommand(command: string, policy: Policy): Verdict | undefined {
+/**
+ * Checks a whole Bash command line; the first rule that fires wins. What a
+ * shell is handed to run (`bash -c "…"`, `eval "…"`, `bash <<EOF`) is checked
+ * as a command line of its own.
+ */
+export function checkCommand(command: string, policy: Policy, depth = 0): Verdict | undefined {
   for (const { source, pattern } of policy.commands) {
     if (pattern.test(command)) {
       return {
@@ -354,12 +560,21 @@ export function checkCommand(command: string, policy: Policy): Verdict | undefin
     if (whole) return whole
   }
 
-  for (const words of splitCommand(command).map(stripPrefixes)) {
+  for (const segment of parseBash(command)) {
+    const words = stripPrefixes(segment.words)
     if (words.length === 0) continue
     const verdict =
       (policy.destructive ? checkDestructive(words, policy.rmMode) : undefined) ??
       (policy.secrets || policy.protect.length > 0 ? checkSecretMentions(words, policy) : undefined)
     if (verdict) return verdict
+
+    if (depth >= MAX_DEPTH) continue
+    const inner = innerScript(words)
+    const scripts = inner !== undefined ? [inner] : SHELLS.has(basename(words[0]!)) ? segment.heredocs : []
+    for (const script of scripts) {
+      const nested = checkCommand(script, policy, depth + 1)
+      if (nested) return nested
+    }
   }
 
   return undefined
