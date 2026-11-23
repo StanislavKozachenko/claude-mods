@@ -104,6 +104,36 @@ describe('secret files', () => {
     }
   })
 
+  test('rc files, keystores and CLI tokens', async () => {
+    for (const path of [
+      '/repo/.envrc',
+      '/home/me/.pgpass',
+      '/home/me/.my.cnf',
+      '/srv/site/.htpasswd',
+      'android/app/release.keystore',
+      'C:\\certs\\server.jks',
+      '/home/me/.kube/config',
+      '/home/me/.config/gh/hosts.yml',
+      'C:\\Users\\me\\AppData\\Roaming\\GitHub CLI\\hosts.yml',
+      '/home/me/.vault-token',
+      '/home/me/.terraformrc',
+      '/home/me/.terraform.d/credentials.tfrc.json',
+      '/home/me/.config/gcloud/application_default_credentials.json',
+      'C:\\Users\\me\\AppData\\Roaming\\gcloud\\credentials.db',
+      '/home/me/.azure/msal_token_cache.json',
+      '/home/me/.cargo/credentials.toml',
+      '/home/me/.gem/credentials',
+      '/home/me/.gradle/gradle.properties',
+    ]) {
+      expect([path, checkPath(path, policy)?.rule]).toEqual([path, 'secret-file'])
+    }
+    for (const path of ['/repo/.envrc.example', '/repo/gradle.properties', '/repo/k8s/config', '/repo/docs/hosts.yml', '/repo/src/keystore.ts']) {
+      expect([path, checkPath(path, policy)?.rule]).toEqual([path, undefined])
+    }
+    expect(ruleOf('cat .envrc')).toBe('secret-file')
+    expect(ruleOf('cat ~/.kube/config')).toBe('secret-file')
+  })
+
   test('shell commands that read, send or write them', async () => {
     expect(ruleOf('cat .env')).toBe('secret-file')
     expect(ruleOf('grep KEY ./config/.env.production')).toBe('secret-file')

@@ -28,7 +28,7 @@
     "secrets": {
       "type": "boolean",
       "title": "Protect secret files",
-      "description": ".env*, keys, certificates, .npmrc, cloud credentials (Read, Edit, Write, Grep and shell commands that read or copy them)",
+      "description": ".env*, .envrc, keys, certificates, keystores, .npmrc, .pgpass, cloud and CLI credentials (Read, Edit, Write, Grep and shell commands that read or copy them)",
       "default": true
     },
     "blockCommands": {
