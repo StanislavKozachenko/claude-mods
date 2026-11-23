@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [redact 0.3.0] - 2026-11-23
+
+### Added
+
+- plain YAML values, compose lists and .properties keys (#92)
+
+### Fixed
+
+- hide .env lines as Read and Grep show them (#88)
+- leave code and names that point at a secret (#84)
+
+---
+
 ## [guard 0.3.0] - 2026-11-23
 
 ### Added
