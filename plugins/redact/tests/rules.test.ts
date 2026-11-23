@@ -96,6 +96,33 @@ describe('secret-named values', () => {
     }
   })
 
+  test('.env lines as Read, cat -n, Grep and grep -rn show them', async () => {
+    const cases: [string, string][] = [
+      ['     2→DB_PASSWORD=hunter2hunter2', '     2→DB_PASSWORD=[redacted:secret-value]'],
+      ['2\texport STRIPE_SECRET=abc123def456', '2\texport STRIPE_SECRET=[redacted:secret-value]'],
+      ['     3\tAPI_KEY="abcdef123456"', '     3\tAPI_KEY="[redacted:secret-value]"'],
+      ['.env:2:DB_PASSWORD=hunter2hunter2', '.env:2:DB_PASSWORD=[redacted:secret-value]'],
+      ['config/.env.production:DB_PASSWORD=hunter2hunter2', 'config/.env.production:DB_PASSWORD=[redacted:secret-value]'],
+      ['C:\\app\\.env:7:DB_PASSWORD=hunter2hunter2', 'C:\\app\\.env:7:DB_PASSWORD=[redacted:secret-value]'],
+      ['my-app/.env-3-DB_PASSWORD=hunter2hunter2', 'my-app/.env-3-DB_PASSWORD=[redacted:secret-value]'],
+      ['12:DB_PASSWORD=hunter2hunter2', '12:DB_PASSWORD=[redacted:secret-value]'],
+    ]
+    for (const [input, output] of cases) expect(clean(input)).toBe(output)
+  })
+
+  test('a line prefix does not make code or placeholders secret', async () => {
+    for (const text of [
+      '     4→    token = request.headers.get("Authorization")',
+      '     6→    API_KEY = settings.OPENAI_KEY',
+      'app.py:4:    password = getpass.getpass()',
+      '     2→DB_PASSWORD=changeme',
+      '.env.example:3:API_KEY=<your-key>',
+      '     9→    String password = readPassword();',
+    ]) {
+      expect(clean(text)).toBe(text)
+    }
+  })
+
   test('code that assigns to a secret-named variable stays', async () => {
     for (const text of [
       '    token = request.headers.get("Authorization")',
