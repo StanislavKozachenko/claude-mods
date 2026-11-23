@@ -96,6 +96,41 @@ describe('secret-named values', () => {
     }
   })
 
+  test('code that assigns to a secret-named variable stays', async () => {
+    for (const text of [
+      '    token = request.headers.get("Authorization")',
+      '    password = getpass.getpass()',
+      'api_key = os.getenv("API_KEY")',
+      'API_KEY = settings.OPENAI_KEY',
+      '        self.token = token',
+      'secret = hashlib.sha256(data).hexdigest()',
+      'password_hash=bcrypt.hashpw(pw, salt)',
+    ]) {
+      expect(clean(text)).toBe(text)
+    }
+  })
+
+  test('names that point at a secret stay', async () => {
+    for (const text of [
+      'TOKEN_URL=https://oauth2.googleapis.com/token',
+      'DB_PASSWORD_FILE=/run/secrets/db_password',
+      '"passwordFile": "/run/secrets/db"',
+      '"secret-name": "prod-db-credentials"',
+      "token_type = 'Bearer-token'",
+      'AWS_ACCESS_KEY_ID_PATH=/etc/aws/key-id',
+    ]) {
+      expect(clean(text)).toBe(text)
+    }
+  })
+
+  test('literal values in code and config still go', async () => {
+    expect(clean('password = "hunter2-is-not-real"')).toBe('password = "[redacted:secret-value]"')
+    expect(clean('    self.api_key = "abcdef123456"')).toBe('    self.api_key = "[redacted:secret-value]"')
+    expect(clean('DB_PASSWORD=hunter2hunter2')).toBe('DB_PASSWORD=[redacted:secret-value]')
+    expect(clean('SECRET_KEY_BASE=0a1b2c3d4e5f')).toBe('SECRET_KEY_BASE=[redacted:secret-value]')
+    expect(clean('CLIENT_SECRET=P@ss(w0rd)!')).toBe('CLIENT_SECRET=[redacted:secret-value]')
+  })
+
   test('generic: false keeps only known formats', async () => {
     const { rules: strict, allow: none } = buildRules({ generic: false })
     expect(redactText('DB_PASSWORD=hunter2-is-not-real', strict, none).text).toBe('DB_PASSWORD=hunter2-is-not-real')
