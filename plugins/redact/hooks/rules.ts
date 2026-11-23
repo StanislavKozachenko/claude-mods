@@ -42,13 +42,50 @@ export const FORMAT_RULES: Rule[] = [
   { kind: 'telegram-bot-token', pattern: /\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b/g },
 ]
 
-/** Values under a secret-looking name: catch what has no known format. */
+/**
+ * Values under a secret-looking name: catch what has no known format. The
+ * groups `name` (the name) and `eq` (the `=` with its spacing) let
+ * isNotSecretValue tell a value from code and from a name that only points at one.
+ */
 export const GENERIC_RULES: Rule[] = [
   // .env and shell style: DB_PASSWORD=..., export API_KEY="..."
-  { kind: 'secret-value', pattern: new RegExp(String.raw`(?<pre>^[ \t]*(?:export[ \t]+)?${SECRET_NAME}[ \t]*=[ \t]*["']?)(?<secret>[^\s"'#]+)`, 'gim') },
+  {
+    kind: 'secret-value',
+    pattern: new RegExp(String.raw`(?<pre>^[ \t]*(?:export[ \t]+)?(?<name>${SECRET_NAME})(?<eq>[ \t]*=[ \t]*)["']?)(?<secret>[^\s"'#]+)`, 'gim'),
+  },
   // JSON, YAML, code: "apiKey": "...", password: '...', token = "..."
-  { kind: 'secret-value', pattern: new RegExp(String.raw`(?<pre>["']?${SECRET_KEY}["']?[ \t]*[:=][ \t]*["'])(?<secret>[^"'\s]+)(?<post>["'])`, 'gi') },
+  { kind: 'secret-value', pattern: new RegExp(String.raw`(?<pre>["']?(?<name>${SECRET_KEY})["']?[ \t]*[:=][ \t]*["'])(?<secret>[^"'\s]+)(?<post>["'])`, 'gi') },
 ]
+
+/**
+ * Name endings that point at a secret rather than hold it: `TOKEN_URL`,
+ * `passwordFile`, `secret-name`, `API_KEY_ID`.
+ */
+const POINTER =
+  /(?:^|_)(?:names?|files?|paths?|dirs?|url|uri|endpoint|host|type|ref|ids?|count|length|size|limit|ttl|expiry|expires(?:_in|_at)?|header|prefix|env|var|field|label)$/
+
+/** `TOKEN_URL`, `tokenUrl`, `token-url` and `token.url` all read `token_url`. */
+const snake = (name: string) =>
+  name
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[.-]/g, '_')
+    .toLowerCase()
+
+/** A call (`getpass.getpass()`, `os.getenv("KEY")`): a value no `.env` holds. */
+const CALL = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\(/
+/** A variable or an attribute (`settings.OPENAI_KEY`, `self.token`). */
+const REFERENCE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/
+
+/**
+ * Whether a secret-named match is not a secret after all: code that assigns
+ * to the name (a call, or a reference with code's spaces around `=`), or a
+ * name that points at a secret (a file, a URL, an id) instead of holding it.
+ */
+export function isNotSecretValue(name: string, secret: string, eq?: string): boolean {
+  if (POINTER.test(snake(name))) return true
+  if (CALL.test(secret)) return true
+  return eq !== undefined && eq.trim() !== eq && REFERENCE.test(secret)
+}
 
 /** Values that are not secrets even under a secret-looking name. */
 const NOT_SECRET =
@@ -97,6 +134,7 @@ export function redactText(text: string, rules: Rule[], allow: ReadonlySet<strin
 
       if (allow.has(secret) || secret.startsWith('[redacted:')) return match
       if (kind === 'secret-value' && (secret.length < MIN_GENERIC_LENGTH || isPlaceholder(secret))) return match
+      if (kind === 'secret-value' && hasGroups && isNotSecretValue(groups.name ?? '', secret, groups.eq)) return match
       if (kind === 'url-password' && isPlaceholder(secret)) return match
 
       hits[kind] = (hits[kind] ?? 0) + 1

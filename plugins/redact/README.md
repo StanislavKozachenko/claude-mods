@@ -24,6 +24,8 @@ Formats are added where a token has a shape of its own. Some services' secrets d
 
 **Secret-named values** (`generic`): `.env` and shell lines (`DB_PASSWORD=…`, `export API_KEY="…"`) and quoted JSON/YAML/code values (`"apiKey": "…"`, `password: '…'`) whose name contains secret, token, password, passphrase, api key, private key, access key, auth key, client secret or credentials. Placeholders stay: `changeme`, `<your-key>`, `${API_KEY}`, `$TOKEN`, `xxxx`, numbers, booleans, `process.env.X`, and anything shorter than six characters.
 
+Code stays as it is, so the model edits the code it read: a call (`password = getpass.getpass()`, `api_key = os.getenv("API_KEY")`) and, with spaces around `=`, a variable or attribute (`API_KEY = settings.OPENAI_KEY`); a literal in code (`password = "hunter2"`) still goes. So do names that point at a secret rather than hold one: `TOKEN_URL`, `DB_PASSWORD_FILE`, `"secretName"`, `token_type` (`…_name`, `…_file`, `…_path`, `…_url`, `…_id`, `…_type` and the like).
+
 Each secret becomes `[redacted:<kind>]`, so the model knows a value was there and asks for it, or reads it through an environment variable, instead of guessing.
 
 ## Where
