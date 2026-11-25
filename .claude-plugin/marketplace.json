@@ -100,6 +100,20 @@
       ]
     },
     {
+      "name": "tint",
+      "source": "./plugins/tint",
+      "version": "0.0.0",
+      "description": "Tints the desktop app's backdrop by project and branch: a calm hue of its own for each repository, a warning glow on main, release branches and production folders",
+      "category": "productivity",
+      "keywords": [
+        "theme",
+        "backdrop",
+        "branch",
+        "desktop",
+        "ui"
+      ]
+    },
+    {
       "name": "turn-stats",
       "source": {
         "source": "git-subdir",

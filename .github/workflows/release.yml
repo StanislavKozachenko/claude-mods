@@ -14,6 +14,7 @@ on:
           - guard
           - notify
           - redact
+          - tint
           - turn-stats
       bump:
         description: 'Version bump (auto: from the commits)'
