@@ -1,6 +1,6 @@
 {
   "name": "tint",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tints the desktop app's backdrop by project and branch: a calm hue of its own for each repository, a warning glow on main, release branches and production folders",
   "author": {
     "name": "Stanislav Kozachenko",

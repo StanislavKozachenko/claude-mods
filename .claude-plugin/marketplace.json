@@ -101,8 +101,13 @@
     },
     {
       "name": "tint",
-      "source": "./plugins/tint",
-      "version": "0.0.0",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/StanislavKozachenko/claude-mods.git",
+        "path": "plugins/tint",
+        "ref": "tint--v0.1.0"
+      },
+      "version": "0.1.0",
       "description": "Tints the desktop app's backdrop by project and branch: a calm hue of its own for each repository, a warning glow on main, release branches and production folders",
       "category": "productivity",
       "keywords": [

@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [tint 0.1.0] - 2026-11-25
+
+### Added
+
+- add the tint mod (#95)
+
+---
+
 ## [redact 0.3.0] - 2026-11-23
 
 ### Added
