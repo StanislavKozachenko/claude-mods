@@ -3,11 +3,13 @@ import { expect, test } from 'claude-code/testing'
 
 import { hueOf } from '../hooks/look'
 
-// The engine beneath the mod: a folder, a working copy the test moves, and
-// the themes the mod set.
+// The engine beneath the mod: a folder no platform resolves elsewhere (on
+// macOS /home does, and the engine then drops a copy whose root is spelled
+// otherwise), a working copy the test moves, and the
+// themes the mod set.
 const engine = (on: On, copy: VcsWorkingCopy | null) => {
   const state = { copy, themes: [] as ThemeSetArgs[] }
-  on('session.cwd', () => ({ value: '/home/me/src/app' }) as never)
+  on('session.cwd', () => ({ value: '/work/app' }) as never)
   on('vcs.detect', () => state.copy as never)
   on('theme.set', (_$, e) => {
     state.themes.push(e as ThemeSetArgs)
@@ -22,15 +24,15 @@ const engine = (on: On, copy: VcsWorkingCopy | null) => {
 
 const COPY: VcsWorkingCopy = {
   vcs: 'git',
-  root: '/home/me/src/app',
-  mainRoot: '/home/me/src/app',
+  root: '/work/app',
+  mainRoot: '/work/app',
   revision: 'abc',
   branch: 'feat/login',
   defaultBranch: 'main',
   remote: 'git@github.com:org/shop.git',
 }
 
-const START = { cwd: '/home/me/src/app', surface: 'desktop', isInteractive: true } as const
+const START = { cwd: '/work/app', surface: 'desktop', isInteractive: true } as const
 
 const TURN = { answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as const
 
