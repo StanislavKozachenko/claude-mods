@@ -45,6 +45,7 @@ An update arrives with a release, when the mod's version changes, not with every
 | [guard](plugins/guard) | Blocks destructive shell commands and access to secret files before they run, in Bash and PowerShell, anywhere in a compound command |
 | [notify](plugins/notify) | Notifications that say what happened: a long turn finished, a permission prompt or a question waiting, an Actions budget running low; on the desktop and, through Claude Code push, on your phone |
 | [redact](plugins/redact) | Keeps secrets that tools print (keys, tokens, passwords, private keys) out of what the model reads and the next request sends |
+| [tint](plugins/tint) | Tints the desktop app's backdrop by project and branch: a calm hue of its own for each repository, a warning glow on main, release branches and production folders |
 | [turn-stats](plugins/turn-stats) | Adds what a turn did to its 'Worked for' line: tool calls by tool, failures, files changed and cost |
 
 ## Develop
