@@ -68,6 +68,6 @@ test('/tint says why and sets the look again', async ($, on) => {
   await $.session.start(START)
 
   const said = await $.command.run({ command: 'tint', args: '' } as never)
-  expect(said.text).toBe('shop on release/2.0: warning tint, branch release/2.0 matches release/*.')
+  expect(said.text).toBe('shop on release/2.0: warning tint, branch release/2.0 matches release/*. Not drawn here: no desktop attached')
   expect(state.themes).toHaveLength(2)
 })

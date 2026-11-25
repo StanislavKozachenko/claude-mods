@@ -53,7 +53,7 @@ export function repoName(remote: string | null): string | undefined {
 
 // The warm band (reds, oranges, ambers) is kept for risky places, so a calm
 // project never reads as a warning.
-const CALM_FROM = 75
+const CALM_FROM = 100
 const CALM_TO = 320
 
 /** A hue for the project, the same on every machine for the same name. */

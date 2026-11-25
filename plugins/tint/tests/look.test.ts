@@ -47,7 +47,7 @@ describe('hueOf', () => {
     expect(hueOf('claude-mods')).toBe(hueOf('Claude-Mods'))
     for (const name of ['a', 'b', 'api', 'web', 'claude-mods', 'infra', 'docs', 'x'.repeat(40)]) {
       const hue = hueOf(name)
-      expect(hue >= 75 && hue < 320).toBe(true)
+      expect(hue >= 100 && hue < 320).toBe(true)
     }
   })
 

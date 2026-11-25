@@ -1,4 +1,4 @@
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, ThemeResult } from 'claude-code'
 
 import { DEFAULT_RULES, describe, judge, lookKey, lookOf, repoName, segments } from './look'
 import type { Place, Rules } from './look'
@@ -31,12 +31,13 @@ async function refresh($: EngineInterface, rules: Rules) {
   const place = await placeOf($)
   const verdict = judge(place, rules)
   const key = lookKey(verdict)
+  let set: ThemeResult | undefined
   if (key !== shown) {
     shown = key
-    await $.theme.set(lookOf(verdict))
+    set = await $.theme.set(lookOf(verdict))
   }
 
-  return { place, verdict }
+  return { place, verdict, set }
 }
 
 /** Subagents run turns of their own inside the main one. */
@@ -71,8 +72,9 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'tint' }, async $ => {
     // Set again even if unchanged, in case another mod's theme replaced this one.
     shown = undefined
-    const { place, verdict } = await refresh($, rules)
+    const { place, verdict, set } = await refresh($, rules)
+    const drawn = set === undefined || set.isDrawn ? '' : ` Not drawn here: ${set.reason}`
 
-    return { text: describe(place, verdict) }
+    return { text: describe(place, verdict) + drawn }
   })
 }
